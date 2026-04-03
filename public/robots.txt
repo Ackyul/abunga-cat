@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /catalogo
+Disallow: /cart
+Disallow: /profile
+Disallow: /api/
+Disallow: /.env
+Disallow: /node_modules/
+
+Sitemap: https://www.abungasaborqueretumba.com/sitemap.xml
+
+# Abunga Sabor Queretumba
+# https://www.abungasaborqueretumba.com
