@@ -87,12 +87,11 @@ function ProductCard({ product, showActions = false }) {
         />
 
         {/* Image area */}
-        <div className="relative bg-gradient-to-br from-[#f6fde8] to-[#eef8d0] flex items-center justify-center overflow-hidden"
-          style={{ height: "11rem" }}>
+        <div className="relative bg-gradient-to-br from-[#f6fde8] to-[#eef8d0] flex items-center justify-center overflow-hidden h-44 md:h-52 lg:h-60">
           <img
             src={product.image}
             alt={product.name}
-            className="h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain p-3 md:p-5 transition-transform duration-300"
             onError={(e) => { e.target.style.display = "none"; }}
           />
           {/* Price badge */}

@@ -11,11 +11,18 @@ function Products() {
     error, 
     visibleCount, 
     setVisibleCount, 
-    getFilteredProducts 
+    getFilteredProducts,
+    setFilter,
   } = useProductStore();
 
   useEffect(() => {
     getProducts();
+    // Ajustar visibleCount inicial según el tamaño de pantalla
+    const isDesktop = window.innerWidth >= 768;
+    if (isDesktop) {
+      // Forzar a 8 en PC (el store inicia en 10)
+      useProductStore.setState({ visibleCount: 8 });
+    }
   }, [getProducts]);
 
   const handleLoadMore = () => {
@@ -36,7 +43,7 @@ function Products() {
 
   return (
     <div className="flex flex-col items-center space-y-8">
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 w-full">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-6 w-full">
         {visibleProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
         ))}
