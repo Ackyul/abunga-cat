@@ -23,7 +23,10 @@ const Footer = () => {
               © {new Date().getFullYear()} Abunga
             </p>
             <p className="text-xs text-white/60 mt-1">
-              Todos los derechos reservados
+              Todos los derechos reservados a
+            </p>
+            <p className="text-xs text-white/70 mt-0.5 font-medium">
+              Yoshua Josafat Núñez Huaccoto
             </p>
           </div>
         </div>
