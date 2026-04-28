@@ -11,19 +11,20 @@ export function MobileFilters() {
   const [isOpen, setIsOpen] = useState(false);
   const { filters, setFilter, products } = useProductStore();
 
-  const ALL_FRUITS = [
-    "Asaí", "Cacao", "Coco", "Fresa", "Mango", 
-    "Manzana", "Maracuyá", "Papaya", 
-    "Piña", "Plátano", "Sandía", "Tamarindo"
-  ];
+  // Lista de frutas dinámica desde los productos
+  const ALL_FRUITS = [...new Set(products.map(p => p.fruta).filter(Boolean))].sort();
 
-  const availableFruits = filters.types.length === 0 
+  const availableFruits = filters.types.length === 0
     ? ALL_FRUITS
     : ALL_FRUITS.filter(fruit => {
         return products.some(p => {
           const typeMatch = filters.types.some(t => {
-             if (t === 'Laminas') return p.tipo.includes('Láminas');
-             return p.tipo === t;
+            if (t === 'Laminas') return p.tipo?.includes('Láminas');
+            if (t === 'Infusiones') return (
+              p.tipo?.toLowerCase().startsWith('infusi') ||
+              p.name?.toLowerCase().includes('ritual')
+            );
+            return p.tipo === t;
           });
           return typeMatch && p.fruta === fruit;
         });

@@ -21,8 +21,11 @@ export function SidebarFilters() {
     : ALL_FRUITS.filter(fruit => {
         return products.some(p => {
           const typeMatch = filters.types.some(t => {
-            if (t === 'Laminas') return p.tipo.includes('Láminas');
-            if (t === 'Infusiones') return p.tipo === 'Infusión' || p.tipo === 'Infusiones' || p.tipo?.toLowerCase().includes('infusion');
+            if (t === 'Laminas') return p.tipo?.includes('Láminas');
+            if (t === 'Infusiones') return (
+              p.tipo?.toLowerCase().startsWith('infusi') ||
+              p.name?.toLowerCase().includes('ritual')
+            );
             return p.tipo === t;
           });
           return typeMatch && p.fruta === fruit;
