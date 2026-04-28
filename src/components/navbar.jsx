@@ -10,7 +10,6 @@ export function Navbar() {
   const navLinks = [
     { path: "/", label: "Home" },
     { path: "/catalogo", label: "Catálogo" },
-    { path: "/profile", label: "Cuenta" },
   ];
 
   return (

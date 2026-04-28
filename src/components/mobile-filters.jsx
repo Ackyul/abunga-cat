@@ -74,6 +74,15 @@ export function MobileFilters() {
                   />
                   <Label htmlFor="mobile-fruta" className="text-base font-medium text-gray-700">Fruta</Label>
                 </div>
+                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg col-span-2">
+                  <Checkbox 
+                    id="mobile-infusiones" 
+                    className="h-5 w-5"
+                    checked={filters.types.includes('Infusiones')}
+                    onCheckedChange={() => handleTypeChange('Infusiones')}
+                  />
+                  <Label htmlFor="mobile-infusiones" className="text-base font-medium text-gray-700">Infusiones</Label>
+                </div>
               </div>
             </div>
 

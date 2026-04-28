@@ -14,7 +14,7 @@ const Catalogo = () => {
   const [isMixOpen, setIsMixOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       <header className="bg-[#95b721] pt-8 pb-12 md:pt-14 md:pb-12 flex flex-row justify-between px-4 md:justify-center items-center relative md:gap-4">
         <div className="relative md:absolute md:left-8 md:top-1/2 md:transform md:-translate-y-1/2 z-10 shrink-0">
           <img 
@@ -39,7 +39,7 @@ const Catalogo = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-[95%]">
+      <main className="container mx-auto px-4 py-8 max-w-[95%] flex-1">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="md:hidden">
             <MobileFilters />

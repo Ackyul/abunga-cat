@@ -11,7 +11,39 @@ function ProductCard({ product, showActions = false }) {
 
   if (!product) return null;
 
+  // Detecta rituales/infusiones por tipo "Infusión" o por nombre
+  const isRitual =
+    product.tipo === "Infusión" ||
+    product.tipo === "Infusiones" ||
+    product.tipo?.toLowerCase().includes("infusion") ||
+    product.name?.toLowerCase().includes("ritual");
+
+  // Color específico por ritual
+  const getRitualTheme = () => {
+    const name = product.name?.toLowerCase() || "";
+    if (name.includes("calma")) return {
+      bg: "linear-gradient(135deg, #8B0B0B 0%, #5a0707 100%)",
+      accent: "#8B0B0B", accentDark: "#5a0707", text: "#5a0707", brand: "#8B0B0B",
+    };
+    if (name.includes("defensa")) return {
+      bg: "linear-gradient(135deg, #8B0040 0%, #5a0028 100%)",
+      accent: "#8B0040", accentDark: "#5a0028", text: "#5a0028", brand: "#8B0040",
+    };
+    if (name.includes("digesti")) return {
+      bg: "linear-gradient(135deg, #2D8C3A 0%, #1a5c25 100%)",
+      accent: "#2D8C3A", accentDark: "#1a5c25", text: "#1a5c25", brand: "#2D8C3A",
+    };
+    // Energía Tropical y default → ámbar dorado
+    return {
+      bg: "linear-gradient(135deg, #f5c842 0%, #c4870a 100%)",
+      accent: "#c4870a", accentDark: "#8b5e07", text: "#6b4a07", brand: "#c4870a",
+    };
+  };
+
+  const ritualTheme = isRitual ? getRitualTheme() : null;
+
   const getPrice = () => {
+    if (isRitual) return 10;
     if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
       return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }
@@ -87,7 +119,13 @@ function ProductCard({ product, showActions = false }) {
         />
 
         {/* Image area */}
-        <div className="relative bg-gradient-to-br from-[#f6fde8] to-[#eef8d0] flex items-center justify-center overflow-hidden h-44 md:h-52 lg:h-60">
+        <div
+          className="relative flex items-center justify-center overflow-hidden h-44 md:h-52 lg:h-60"
+          style={isRitual
+            ? { background: ritualTheme.bg }
+            : { background: "linear-gradient(135deg, #f6fde8 0%, #eef8d0 100%)" }
+          }
+        >
           <img
             src={product.image}
             alt={product.name}
@@ -95,7 +133,13 @@ function ProductCard({ product, showActions = false }) {
             onError={(e) => { e.target.style.display = "none"; }}
           />
           {/* Price badge */}
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-[#7a9a18] font-black text-sm px-3 py-1 rounded-full shadow-sm border border-[#95b721]/20">
+          <div
+            className="absolute top-3 right-3 backdrop-blur-sm font-black text-sm px-3 py-1 rounded-full shadow-sm border"
+            style={isRitual
+              ? { background: "rgba(255,255,255,0.18)", color: "#fff", borderColor: "rgba(255,255,255,0.4)" }
+              : { background: "rgba(255,255,255,0.92)", color: "#7a9a18", borderColor: "rgba(149,183,33,0.2)" }
+            }
+          >
             S/ {displayPrice}
           </div>
         </div>
@@ -104,8 +148,14 @@ function ProductCard({ product, showActions = false }) {
         <div className="flex flex-col flex-1 p-4 gap-3">
           {/* Brand + Name */}
           <div>
-            <p className="text-[9px] font-bold text-[#95b721]/70 uppercase tracking-widest mb-0.5">{product.brand}</p>
-            <h3 className="font-bold text-sm md:text-base leading-snug line-clamp-2 text-gray-800">{product.name}</h3>
+            <p
+              className="text-[9px] font-bold uppercase tracking-widest mb-0.5"
+              style={{ color: isRitual ? ritualTheme.brand : "rgba(149,183,33,0.7)" }}
+            >{product.brand}</p>
+            <h3
+              className="font-bold text-sm md:text-base leading-snug line-clamp-2"
+              style={{ color: isRitual ? ritualTheme.text : "#1f2937" }}
+            >{product.name}</h3>
           </div>
 
           {/* Weight selector */}
@@ -148,7 +198,11 @@ function ProductCard({ product, showActions = false }) {
             ) : (
               <button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#9ec425] to-[#8ca91f] hover:from-[#8ca91f] hover:to-[#7a9a18] text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
+                className="w-full flex items-center justify-center gap-2 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
+                style={isRitual
+                  ? { background: `linear-gradient(to right, ${ritualTheme.accent}, ${ritualTheme.accentDark})` }
+                  : { background: "linear-gradient(to right, #9ec425, #8ca91f)" }
+                }
               >
                 <span>＋</span>
                 <span>Añadir</span>

@@ -45,6 +45,12 @@ const useProductStore = create((set, get) => ({
           else if (fruta === "Tamarindo") newImage = "/r-tamarindo.png";
           else if (fruta === "Papaya") newImage = "/r-papaya.png";
           else if (fruta === "Piña") newImage = "/r-pina.png";
+        } else if (p.tipo === "Infusión" || p.tipo?.toLowerCase().includes("infusion")) {
+          const nameLow = p.name?.toLowerCase() || "";
+          if (nameLow.includes("calma"))    newImage = "/i-calma.png";
+          else if (nameLow.includes("energ")) newImage = "/i-energia.png";
+          else if (nameLow.includes("defensa")) newImage = "/i-defensa.png";
+          else if (nameLow.includes("digesti")) newImage = "/i-digestion.png";
         }
 
         return { ...p, fruta, image: newImage };
@@ -84,6 +90,7 @@ const useProductStore = create((set, get) => ({
         filters.types.length === 0 ||
         filters.types.some((filterType) => {
           if (filterType === "Laminas") return product.tipo.includes("Láminas");
+          if (filterType === "Infusiones") return product.tipo === "Infusión" || product.tipo === "Infusiones" || product.tipo?.toLowerCase().includes("infusion");
           return product.tipo === filterType;
         });
 

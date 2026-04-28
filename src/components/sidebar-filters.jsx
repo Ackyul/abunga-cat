@@ -13,19 +13,17 @@ export function SidebarFilters() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { filters, setFilter, products } = useProductStore();
 
-  const ALL_FRUITS = [
-    "Acaí", "Cacao", "Coco", "Fresa", "Mango", 
-    "Manzana", "Maracuyá", "Papaya", 
-    "Piña", "Plátano", "Sandía", "Tamarindo"
-  ];
+  // Lista de frutas dinámica derivada de los productos disponibles
+  const ALL_FRUITS = [...new Set(products.map(p => p.fruta).filter(Boolean))].sort();
 
-  const availableFruits = filters.types.length === 0 
+  const availableFruits = filters.types.length === 0
     ? ALL_FRUITS
     : ALL_FRUITS.filter(fruit => {
         return products.some(p => {
           const typeMatch = filters.types.some(t => {
-             if (t === 'Laminas') return p.tipo.includes('Láminas');
-             return p.tipo === t;
+            if (t === 'Laminas') return p.tipo.includes('Láminas');
+            if (t === 'Infusiones') return p.tipo === 'Infusión' || p.tipo === 'Infusiones' || p.tipo?.toLowerCase().includes('infusion');
+            return p.tipo === t;
           });
           return typeMatch && p.fruta === fruit;
         });
@@ -83,6 +81,15 @@ export function SidebarFilters() {
                 className="h-6 w-6"
                 checked={filters.types.includes('Fruta')}
                 onCheckedChange={() => handleTypeChange('Fruta')}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="infusiones-tipo" className="text-lg">Infusiones</Label>
+              <Checkbox 
+                id="infusiones-tipo" 
+                className="h-6 w-6"
+                checked={filters.types.includes('Infusiones')}
+                onCheckedChange={() => handleTypeChange('Infusiones')}
               />
             </div>
           </Collapsible.Content>
