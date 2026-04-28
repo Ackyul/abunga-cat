@@ -22,9 +22,9 @@ export function ProductModal({ product, isOpen, onClose }) {
     if (name.includes("calma"))
       return { bg: "linear-gradient(135deg, #8B0B0B 0%, #5a0707 100%)", accent: "#8B0B0B" };
     if (name.includes("defensa"))
-      return { bg: "linear-gradient(135deg, #1a6b3c 0%, #0d4025 100%)", accent: "#1a6b3c" };
+      return { bg: "linear-gradient(135deg, #8B0040 0%, #5a0028 100%)", accent: "#8B0040" };
     if (name.includes("digesti"))
-      return { bg: "linear-gradient(135deg, #b36200 0%, #7a4200 100%)", accent: "#b36200" };
+      return { bg: "linear-gradient(135deg, #2D8C3A 0%, #1a5c25 100%)", accent: "#2D8C3A" };
     // Energía Tropical y default → ámbar dorado
     return { bg: "linear-gradient(135deg, #f5c842 0%, #c4870a 100%)", accent: "#c4870a" };
   };
