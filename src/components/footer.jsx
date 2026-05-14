@@ -26,7 +26,14 @@ const Footer = () => {
               Todos los derechos reservados a
             </p>
             <p className="text-xs text-white/70 mt-0.5 font-medium">
-              Yoshua Josafat Núñez Huaccoto
+              <a 
+                href="https://ackyul.github.io" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:text-white hover:underline transition-colors"
+              >
+                Yoshua Josafat Núñez Huaccoto
+              </a>
             </p>
           </div>
         </div>
