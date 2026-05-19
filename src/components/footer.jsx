@@ -27,7 +27,7 @@ const Footer = () => {
             </p>
             <p className="text-xs text-white/70 mt-0.5 font-medium">
               <a 
-                href="https://ackyul.github.io" 
+                href="https://ackyul.github.io/yoshuajosafatnunezhuaccoto.github.io/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hover:text-white hover:underline transition-colors"
