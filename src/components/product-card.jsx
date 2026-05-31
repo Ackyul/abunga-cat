@@ -40,10 +40,85 @@ function ProductCard({ product, showActions = false }) {
     };
   };
 
+  // Color específico por fruta
+  const getFrutaTheme = () => {
+    const fruta = product.fruta || "";
+    const nameLow = product.name?.toLowerCase() || "";
+    switch (true) {
+      case fruta === "Fresa":
+        return { bg: "linear-gradient(135deg, #e8354a 0%, #b5192c 100%)", accent: "#c4202f", accentDark: "#8f1220", text: "#7a0f1c", brand: "#c4202f" };
+      case fruta === "Manzana" && nameLow.includes("canela"):
+        // Café canela cálido
+        return { bg: "linear-gradient(135deg, #9b6a3a 0%, #6b3f1e 100%)", accent: "#8a5a2e", accentDark: "#5c3515", text: "#4a2910", brand: "#8a5a2e" };
+      case fruta === "Manzana":
+        return { bg: "linear-gradient(135deg, #7dc44a 0%, #4f9a28 100%)", accent: "#5aab2e", accentDark: "#3d7d1e", text: "#2e5e15", brand: "#4f9a28" };
+      case fruta === "Plátano":
+        return { bg: "linear-gradient(135deg, #f7d94c 0%, #d4a90d 100%)", accent: "#c49a0c", accentDark: "#8f6f08", text: "#6b5007", brand: "#c49a0c" };
+      case fruta === "Papaya":
+        // Naranja coral-salmón
+        return { bg: "linear-gradient(135deg, #f4623a 0%, #c43518 100%)", accent: "#d44820", accentDark: "#9c2f0e", text: "#7a2610", brand: "#d44820" };
+      case fruta === "Piña":
+        return { bg: "linear-gradient(135deg, #f5c33a 0%, #c8910e 100%)", accent: "#c48d0e", accentDark: "#8f6608", text: "#6b4d08", brand: "#c48d0e" };
+      case fruta === "Mango":
+        // Naranja ámbar profundo
+        return { bg: "linear-gradient(135deg, #f47a10 0%, #b84d00 100%)", accent: "#d46010", accentDark: "#9c3e00", text: "#7a3200", brand: "#d46010" };
+      case fruta === "Naranja":
+        // Naranja intenso vibrante
+        return { bg: "linear-gradient(135deg, #ff7300 0%, #d45000 100%)", accent: "#e05800", accentDark: "#a33800", text: "#7a2c00", brand: "#e05800" };
+      default:
+        return null;
+    }
+  };
+
+  const isFruta = product.tipo === "Fruta" && !!getFrutaTheme();
+  const frutaTheme = isFruta ? getFrutaTheme() : null;
+
+  // Color específico por lámina
+  const getLaminaTheme = () => {
+    const fruta = product.fruta || "";
+    switch (fruta) {
+      case "Fresa":
+        // Rojo vibrante
+        return { bg: "linear-gradient(135deg, #e8354a 0%, #b5192c 100%)", accent: "#c4202f", accentDark: "#8f1220", text: "#7a0f1c", brand: "#c4202f" };
+      case "Tamarindo":
+        // Marrón caramelo cálido
+        return { bg: "linear-gradient(135deg, #b5703a 0%, #7a4218 100%)", accent: "#9a5c28", accentDark: "#6b3c10", text: "#4a2a0c", brand: "#9a5c28" };
+      case "Piña":
+        // Lima-amarillo refrescante
+        return { bg: "linear-gradient(135deg, #c8e024 0%, #90a80e 100%)", accent: "#a8c010", accentDark: "#788a08", text: "#4e5c05", brand: "#a8c010" };
+      case "Coco":
+        // Crema tropical suave
+        return { bg: "linear-gradient(135deg, #d4a96a 0%, #a07030 100%)", accent: "#b88840", accentDark: "#7a5820", text: "#5a3c10", brand: "#b88840" };
+      case "Acaí":
+        // Violeta profundo
+        return { bg: "linear-gradient(135deg, #6b2fa0 0%, #3d1070 100%)", accent: "#5a2090", accentDark: "#380c60", text: "#280840", brand: "#5a2090" };
+      case "Maracuyá":
+        // Amarillo-naranja tropical
+        return { bg: "linear-gradient(135deg, #f5a820 0%, #c06800 100%)", accent: "#d88010", accentDark: "#9c5000", text: "#6a3800", brand: "#d88010" };
+      case "Sandía":
+        // Rojo-rosa sandía con toque verde
+        return { bg: "linear-gradient(135deg, #e83458 0%, #a0082a 100%)", accent: "#cc1840", accentDark: "#8c0418", text: "#640010", brand: "#cc1840" };
+      case "Papaya":
+        // Durazno-naranja suave
+        return { bg: "linear-gradient(135deg, #f4904a 0%, #c45820 100%)", accent: "#d47030", accentDark: "#9c4810", text: "#6a3008", brand: "#d47030" };
+      case "Cacao":
+        // Chocolate oscuro intenso
+        return { bg: "linear-gradient(135deg, #5c2e08 0%, #3a1800 100%)", accent: "#7a4010", accentDark: "#4a2005", text: "#3a1800", brand: "#7a4010" };
+      default:
+        return null;
+    }
+  };
+
+  const isLamina = product.tipo?.includes("L\u00e1minas") && !!getLaminaTheme();
+  const laminaTheme = isLamina ? getLaminaTheme() : null;
+
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
   const getPrice = () => {
     if (isRitual) return 10;
+    const nameLow = product.name?.toLowerCase() || "";
+    // Manzana con Canela y Naranja: precio fijo
+    if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
     if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
       return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }
@@ -96,7 +171,9 @@ function ProductCard({ product, showActions = false }) {
     if (glare) glare.style.opacity = "0";
   };
 
-  const hasWeights = product.tipo === "Fruta" || product.tipo === "Mix";
+  const nameLow2 = product.name?.toLowerCase() || "";
+  const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
+  const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
 
   return (
     <>
@@ -121,8 +198,10 @@ function ProductCard({ product, showActions = false }) {
         {/* Image area */}
         <div
           className="relative flex items-center justify-center overflow-hidden h-44 md:h-52 lg:h-60"
-          style={isRitual
-            ? { background: ritualTheme.bg }
+          style={
+            isRitual ? { background: ritualTheme.bg }
+            : isFruta  ? { background: frutaTheme.bg }
+            : isLamina ? { background: laminaTheme.bg }
             : { background: "linear-gradient(135deg, #f6fde8 0%, #eef8d0 100%)" }
           }
         >
@@ -135,8 +214,10 @@ function ProductCard({ product, showActions = false }) {
           {/* Price badge */}
           <div
             className="absolute top-3 right-3 backdrop-blur-sm font-black text-sm px-3 py-1 rounded-full shadow-sm border"
-            style={isRitual
-              ? { background: "rgba(255,255,255,0.18)", color: "#fff", borderColor: "rgba(255,255,255,0.4)" }
+            style={
+              isRitual ? { background: "rgba(255,255,255,0.18)", color: "#fff", borderColor: "rgba(255,255,255,0.4)" }
+              : isFruta  ? { background: "rgba(255,255,255,0.22)", color: "#fff", borderColor: "rgba(255,255,255,0.45)" }
+              : isLamina ? { background: "rgba(255,255,255,0.20)", color: "#fff", borderColor: "rgba(255,255,255,0.42)" }
               : { background: "rgba(255,255,255,0.92)", color: "#7a9a18", borderColor: "rgba(149,183,33,0.2)" }
             }
           >
@@ -150,11 +231,11 @@ function ProductCard({ product, showActions = false }) {
           <div>
             <p
               className="text-[9px] font-bold uppercase tracking-widest mb-0.5"
-              style={{ color: isRitual ? ritualTheme.brand : "rgba(149,183,33,0.7)" }}
+              style={{ color: isRitual ? ritualTheme.brand : isFruta ? frutaTheme.brand : isLamina ? laminaTheme.brand : "rgba(149,183,33,0.7)" }}
             >{product.brand}</p>
             <h3
               className="font-bold text-sm md:text-base leading-snug line-clamp-2"
-              style={{ color: isRitual ? ritualTheme.text : "#1f2937" }}
+              style={{ color: isRitual ? ritualTheme.text : isFruta ? frutaTheme.text : isLamina ? laminaTheme.text : "#1f2937" }}
             >{product.name}</h3>
           </div>
 
@@ -199,8 +280,10 @@ function ProductCard({ product, showActions = false }) {
               <button
                 onClick={handleAddToCart}
                 className="w-full flex items-center justify-center gap-2 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
-                style={isRitual
-                  ? { background: `linear-gradient(to right, ${ritualTheme.accent}, ${ritualTheme.accentDark})` }
+                style={
+                  isRitual  ? { background: `linear-gradient(to right, ${ritualTheme.accent}, ${ritualTheme.accentDark})` }
+                  : isFruta  ? { background: `linear-gradient(to right, ${frutaTheme.accent}, ${frutaTheme.accentDark})` }
+                  : isLamina ? { background: `linear-gradient(to right, ${laminaTheme.accent}, ${laminaTheme.accentDark})` }
                   : { background: "linear-gradient(to right, #9ec425, #8ca91f)" }
                 }
               >

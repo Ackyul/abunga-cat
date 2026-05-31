@@ -20,19 +20,79 @@ export function ProductModal({ product, isOpen, onClose }) {
   const getRitualTheme = () => {
     const name = product.name?.toLowerCase() || "";
     if (name.includes("calma"))
-      return { bg: "linear-gradient(135deg, #8B0B0B 0%, #5a0707 100%)", accent: "#8B0B0B" };
+      return { bg: "linear-gradient(135deg, #8B0B0B 0%, #5a0707 100%)", accent: "#8B0B0B", brand: "#8B0B0B" };
     if (name.includes("defensa"))
-      return { bg: "linear-gradient(135deg, #8B0040 0%, #5a0028 100%)", accent: "#8B0040" };
+      return { bg: "linear-gradient(135deg, #8B0040 0%, #5a0028 100%)", accent: "#8B0040", brand: "#8B0040" };
     if (name.includes("digesti"))
-      return { bg: "linear-gradient(135deg, #2D8C3A 0%, #1a5c25 100%)", accent: "#2D8C3A" };
+      return { bg: "linear-gradient(135deg, #2D8C3A 0%, #1a5c25 100%)", accent: "#2D8C3A", brand: "#2D8C3A" };
     // Energía Tropical y default → ámbar dorado
-    return { bg: "linear-gradient(135deg, #f5c842 0%, #c4870a 100%)", accent: "#c4870a" };
+    return { bg: "linear-gradient(135deg, #f5c842 0%, #c4870a 100%)", accent: "#c4870a", brand: "#c4870a" };
   };
+
+  const getFrutaTheme = () => {
+    const fruta = product.fruta || "";
+    const nameLow = product.name?.toLowerCase() || "";
+    switch (true) {
+      case fruta === "Fresa":
+        return { bg: "linear-gradient(135deg, #e8354a 0%, #b5192c 100%)", accent: "#c4202f", brand: "#c4202f" };
+      case fruta === "Manzana" && nameLow.includes("canela"):
+        return { bg: "linear-gradient(135deg, #9b6a3a 0%, #6b3f1e 100%)", accent: "#8a5a2e", brand: "#8a5a2e" };
+      case fruta === "Manzana":
+        return { bg: "linear-gradient(135deg, #7dc44a 0%, #4f9a28 100%)", accent: "#4f9a28", brand: "#4f9a28" };
+      case fruta === "Plátano":
+        return { bg: "linear-gradient(135deg, #f7d94c 0%, #d4a90d 100%)", accent: "#c49a0c", brand: "#c49a0c" };
+      case fruta === "Papaya":
+        return { bg: "linear-gradient(135deg, #f4623a 0%, #c43518 100%)", accent: "#d44820", brand: "#d44820" };
+      case fruta === "Piña":
+        return { bg: "linear-gradient(135deg, #f5c33a 0%, #c8910e 100%)", accent: "#c48d0e", brand: "#c48d0e" };
+      case fruta === "Mango":
+        return { bg: "linear-gradient(135deg, #f47a10 0%, #b84d00 100%)", accent: "#d46010", brand: "#d46010" };
+      case fruta === "Naranja":
+        return { bg: "linear-gradient(135deg, #ff7300 0%, #d45000 100%)", accent: "#e05800", brand: "#e05800" };
+      default:
+        return null;
+    }
+  };
+
+  const getLaminaTheme = () => {
+    const fruta = product.fruta || "";
+    switch (fruta) {
+      case "Fresa":
+        return { bg: "linear-gradient(135deg, #e8354a 0%, #b5192c 100%)", accent: "#c4202f", brand: "#c4202f" };
+      case "Tamarindo":
+        return { bg: "linear-gradient(135deg, #b5703a 0%, #7a4218 100%)", accent: "#9a5c28", brand: "#9a5c28" };
+      case "Piña":
+        return { bg: "linear-gradient(135deg, #c8e024 0%, #90a80e 100%)", accent: "#a8c010", brand: "#a8c010" };
+      case "Coco":
+        return { bg: "linear-gradient(135deg, #d4a96a 0%, #a07030 100%)", accent: "#b88840", brand: "#b88840" };
+      case "Acaí":
+        return { bg: "linear-gradient(135deg, #6b2fa0 0%, #3d1070 100%)", accent: "#5a2090", brand: "#5a2090" };
+      case "Maracuyá":
+        return { bg: "linear-gradient(135deg, #f5a820 0%, #c06800 100%)", accent: "#d88010", brand: "#d88010" };
+      case "Sandía":
+        return { bg: "linear-gradient(135deg, #e83458 0%, #a0082a 100%)", accent: "#cc1840", brand: "#cc1840" };
+      case "Papaya":
+        return { bg: "linear-gradient(135deg, #f4904a 0%, #c45820 100%)", accent: "#d47030", brand: "#d47030" };
+      case "Cacao":
+        return { bg: "linear-gradient(135deg, #5c2e08 0%, #3a1800 100%)", accent: "#7a4010", brand: "#7a4010" };
+      default:
+        return null;
+    }
+  };
+
+  const isFruta = product.tipo === "Fruta" && !!getFrutaTheme();
+  const frutaTheme = isFruta ? getFrutaTheme() : null;
+
+  const isLamina = product.tipo?.includes("L\u00e1minas") && !!getLaminaTheme();
+  const laminaTheme = isLamina ? getLaminaTheme() : null;
 
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
   const getPrice = () => {
     if (isRitual) return 10;
+    const nameLow = product.name?.toLowerCase() || "";
+    // Manzana con Canela y Naranja: precio fijo
+    if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
     if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
        return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }
@@ -44,19 +104,28 @@ export function ProductModal({ product, isOpen, onClose }) {
 
   const displayPrice = getPrice();
 
+  const nameLow2 = product.name?.toLowerCase() || "";
+  const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
+  const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 bg-white rounded-3xl h-[90vh] md:h-[600px] overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
         <div
-          className="w-full md:w-1/2 h-64 md:h-full flex items-center justify-center p-8 shrink-0"
-          style={isRitual ? { background: ritualTheme.bg } : { background: "#f9fafb" }}
+          className="w-full md:w-1/2 h-64 md:h-full flex items-center justify-center p-8 shrink-0 animate-gradient-shift"
+          style={
+            isRitual ? { background: ritualTheme.bg }
+            : isFruta ? { background: frutaTheme.bg }
+            : isLamina ? { background: laminaTheme.bg }
+            : { background: "#f9fafb" }
+          }
         >
              <img 
                src={product.image} 
                alt={product.name} 
                className={cn(
-                 "max-h-full max-w-full object-contain",
-                 !isRitual && "mix-blend-multiply"
+                 "max-h-full max-w-full object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-105",
+                 !isRitual && !isFruta && !isLamina && "mix-blend-multiply"
                )}
                onError={(e) => { e.target.style.display = 'none'; }} 
              />
@@ -64,7 +133,15 @@ export function ProductModal({ product, isOpen, onClose }) {
 
         <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center space-y-4 md:space-y-8 relative">
             <div>
-                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">{product.brand}</p>
+                <p 
+                  className="text-xs md:text-sm font-bold uppercase tracking-widest"
+                  style={{
+                    color: isRitual ? ritualTheme.brand
+                    : isFruta ? frutaTheme.brand
+                    : isLamina ? laminaTheme.brand
+                    : "rgba(149,183,33,0.7)"
+                  }}
+                >{product.brand}</p>
                 <h2 className="text-2xl md:text-4xl font-extrabold text-gray-900 leading-tight">{product.name}</h2>
                 <p className="text-gray-500 mt-2 md:mt-4 text-xs md:text-base leading-relaxed">
                     {isRitual
@@ -76,7 +153,7 @@ export function ProductModal({ product, isOpen, onClose }) {
                 </p>
             </div>
 
-            {(product.tipo === "Fruta" || product.tipo === "Mix") && (
+            {hasWeights && (
                 <div className="space-y-2 md:space-y-4">
                     <p className="text-xs md:text-sm font-bold text-gray-900 uppercase">Selecciona el peso:</p>
                     <div className="flex gap-2 md:gap-4 overflow-x-auto pb-2">
@@ -106,7 +183,12 @@ export function ProductModal({ product, isOpen, onClose }) {
                      <p className="text-xs md:text-sm font-bold text-gray-500 uppercase mb-1">Precio</p>
                      <p
                        className="text-3xl md:text-5xl font-black"
-                       style={{ color: isRitual ? ritualTheme.accent : "#95b721" }}
+                       style={{
+                         color: isRitual ? ritualTheme.accent
+                         : isFruta ? frutaTheme.accent
+                         : isLamina ? laminaTheme.accent
+                         : "#95b721"
+                       }}
                      >S/ {displayPrice}</p>
                 </div>
             </div>
