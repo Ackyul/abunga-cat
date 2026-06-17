@@ -119,6 +119,19 @@ function ProductCard({ product, showActions = false }) {
     const nameLow = product.name?.toLowerCase() || "";
     // Manzana con Canela y Naranja: precio fijo
     if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
+    
+    // Obtener mapa de precios desde la base de datos (Neon Postgres) si existe
+    let preciosMap = product.precios;
+    if (typeof preciosMap === 'string') {
+      try {
+        preciosMap = JSON.parse(preciosMap);
+      } catch (e) {}
+    }
+    
+    if (preciosMap && typeof preciosMap === 'object' && preciosMap[selectedWeight] !== undefined) {
+      return preciosMap[selectedWeight];
+    }
+    
     if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
       return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }

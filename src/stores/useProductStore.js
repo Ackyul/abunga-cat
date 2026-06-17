@@ -25,37 +25,49 @@ const useProductStore = create((set, get) => ({
 
       data = data.map((p) => {
         let fruta = p.fruta === "Asaí" ? "Acaí" : p.fruta;
-        let newImage = p.image;
+        const originalImage = p.image || p.img;
+        
+        // Conservar imágenes externas de Cloudinary u otras URLs válidas
+        const hasExternalImage = originalImage && (
+          originalImage.startsWith('http://') || 
+          originalImage.startsWith('https://') || 
+          originalImage.startsWith('/assets/') ||
+          (originalImage.startsWith('/') && !originalImage.includes('img '))
+        );
 
-        if (p.tipo === "Fruta") {
-          if (fruta === "Piña") newImage = "/f-pina.png";
-          else if (fruta === "Mango") newImage = "/f-mango.png";
-          else if (fruta === "Naranja") newImage = "/f-naranja.png";
-          else if (fruta === "Manzana" && p.name?.toLowerCase().includes("canela")) newImage = "/f-manzana-canela.png";
-          else if (fruta === "Manzana") newImage = "/f-manzana.png";
-          else if (fruta === "Fresa") newImage = "/f-fresa.png";
-          else if (fruta === "Papaya") newImage = "/f-papaya.png";
-          else if (fruta === "Plátano") newImage = "/f-platano.png";
-        } else if (p.tipo.includes("Láminas")) {
-          if (fruta === "Acaí" || p.name.toLowerCase().includes("acai"))
-            newImage = "/r-acai.png";
-          else if (fruta === "Maracuyá") newImage = "/r-maracuya.png";
-          else if (fruta === "Cacao") newImage = "/r-cacao.png";
-          else if (fruta === "Coco") newImage = "/r-coco.png";
-          else if (fruta === "Fresa") newImage = "/r-fresa.png";
-          else if (fruta === "Sandía") newImage = "/r-sandia.png";
-          else if (fruta === "Tamarindo") newImage = "/r-tamarindo.png";
-          else if (fruta === "Papaya") newImage = "/r-papaya.png";
-          else if (fruta === "Piña") newImage = "/r-pina.png";
-        } else if (p.tipo === "Infusión" || p.tipo?.toLowerCase().includes("infusion")) {
-          const nameLow = p.name?.toLowerCase() || "";
-          if (nameLow.includes("calma"))    newImage = "/i-calma.png";
-          else if (nameLow.includes("energ")) newImage = "/i-energia.png";
-          else if (nameLow.includes("defensa")) newImage = "/i-defensa.png";
-          else if (nameLow.includes("digesti")) newImage = "/i-digestion.png";
+        let newImage = hasExternalImage ? originalImage : null;
+
+        if (!hasExternalImage) {
+          if (p.tipo === "Fruta") {
+            if (fruta === "Piña") newImage = "/f-pina.png";
+            else if (fruta === "Mango") newImage = "/f-mango.png";
+            else if (fruta === "Naranja") newImage = "/f-naranja.png";
+            else if (fruta === "Manzana" && p.name?.toLowerCase().includes("canela")) newImage = "/f-manzana-canela.png";
+            else if (fruta === "Manzana") newImage = "/f-manzana.png";
+            else if (fruta === "Fresa") newImage = "/f-fresa.png";
+            else if (fruta === "Papaya") newImage = "/f-papaya.png";
+            else if (fruta === "Plátano") newImage = "/f-platano.png";
+          } else if (p.tipo.includes("Láminas")) {
+            if (fruta === "Acaí" || p.name.toLowerCase().includes("acai"))
+              newImage = "/r-acai.png";
+            else if (fruta === "Maracuyá") newImage = "/r-maracuya.png";
+            else if (fruta === "Cacao") newImage = "/r-cacao.png";
+            else if (fruta === "Coco") newImage = "/r-coco.png";
+            else if (fruta === "Fresa") newImage = "/r-fresa.png";
+            else if (fruta === "Sandía") newImage = "/r-sandia.png";
+            else if (fruta === "Tamarindo") newImage = "/r-tamarindo.png";
+            else if (fruta === "Papaya") newImage = "/r-papaya.png";
+            else if (fruta === "Piña") newImage = "/r-pina.png";
+          } else if (p.tipo === "Infusión" || p.tipo?.toLowerCase().includes("infusion")) {
+            const nameLow = p.name?.toLowerCase() || "";
+            if (nameLow.includes("calma"))    newImage = "/i-calma.png";
+            else if (nameLow.includes("energ")) newImage = "/i-energia.png";
+            else if (nameLow.includes("defensa")) newImage = "/i-defensa.png";
+            else if (nameLow.includes("digesti")) newImage = "/i-digestion.png";
+          }
         }
 
-        return { ...p, fruta, image: newImage };
+        return { ...p, fruta, image: newImage || originalImage };
       });
 
       set({ products: data, loading: false });
