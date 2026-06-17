@@ -1,6 +1,6 @@
 import { Navbar } from "../../components/navbar";
+import { Link } from "react-router-dom";
 import Footer from "../../components/footer";
-import Products from "../../components/products";
 
 const Nosotros = () => {
   return (
@@ -85,12 +85,22 @@ const Nosotros = () => {
           </div>
         </div>
 
-        {/* ===== CATÁLOGO AL FINAL ===== */}
-        <div className="pt-16 border-t border-gray-100">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-[#8ca91f] text-center mb-12 tracking-tight">
-            Nuestro Catálogo 🛒
+        {/* ===== ENLACE AL CATÁLOGO ===== */}
+        <div className="pt-16 border-t border-gray-100 flex flex-col items-center gap-6">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-[#8ca91f] text-center tracking-tight">
+            ¿Listo para saborear? 🍓
           </h2>
-          <Products />
+          <p className="text-gray-500 text-lg md:text-xl text-center max-w-lg">
+            Explora nuestra variedad completa de snacks saludables, rollitos deshidratados e infusiones de alta calidad.
+          </p>
+          <Link
+            to="/catalogo"
+            onClick={() => window.scrollTo(0, 0)}
+            className="inline-flex items-center gap-3 bg-[#95b721] hover:bg-[#84a31d] text-white font-extrabold py-4 px-10 rounded-full text-xl shadow-[0_8px_30px_rgba(149,183,33,0.3)] transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 group"
+          >
+            <span>Ver Catálogo Completo 🛒</span>
+            <span className="text-2xl group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+          </Link>
         </div>
 
       </main>
