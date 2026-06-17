@@ -8,7 +8,8 @@ export function Navbar() {
   // const itemsCount = useCartStore((state) => state.getItemsCount());
 
   const navLinks = [
-    { path: "/", label: "Home" },
+    { path: "/", label: "Descubre" },
+    { path: "/nosotros", label: "Nosotros" },
     { path: "/catalogo", label: "Catálogo" },
   ];
 
