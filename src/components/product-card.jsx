@@ -114,6 +114,50 @@ function ProductCard({ product, showActions = false }) {
 
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
+  // Custom color overrides from the database (admin-configurable)
+  const hasCustomBg = !!product.bg_color;
+  const hasCustomText = !!product.text_color;
+  const customBg = hasCustomBg ? product.bg_color : null;
+  const customText = hasCustomText ? product.text_color : null;
+
+  // Derive the active theme background for the image area
+  const getCardBg = () => {
+    if (customBg) return customBg;
+    if (isRitual) return ritualTheme.bg;
+    if (isFruta) return frutaTheme.bg;
+    if (isLamina) return laminaTheme.bg;
+    return 'linear-gradient(135deg, #f6fde8 0%, #eef8d0 100%)';
+  };
+  // Derive text color for name/brand
+  const getNameColor = () => {
+    if (customText) return customText;
+    if (isRitual) return ritualTheme.text;
+    if (isFruta) return frutaTheme.text;
+    if (isLamina) return laminaTheme.text;
+    return '#1f2937';
+  };
+  const getBrandColor = () => {
+    if (customText) return customText + 'aa'; // slightly transparent
+    if (isRitual) return ritualTheme.brand;
+    if (isFruta) return frutaTheme.brand;
+    if (isLamina) return laminaTheme.brand;
+    return 'rgba(149,183,33,0.7)';
+  };
+  const getButtonBg = () => {
+    if (customBg) return customBg;
+    if (isRitual) return `linear-gradient(to right, ${ritualTheme.accent}, ${ritualTheme.accentDark})`;
+    if (isFruta) return `linear-gradient(to right, ${frutaTheme.accent}, ${frutaTheme.accentDark})`;
+    if (isLamina) return `linear-gradient(to right, ${laminaTheme.accent}, ${laminaTheme.accentDark})`;
+    return 'linear-gradient(to right, #9ec425, #8ca91f)';
+  };
+  const getPriceBadgeStyle = () => {
+    if (customBg) return { background: 'rgba(255,255,255,0.22)', color: customText || '#fff', borderColor: 'rgba(255,255,255,0.45)' };
+    if (isRitual) return { background: 'rgba(255,255,255,0.18)', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' };
+    if (isFruta) return { background: 'rgba(255,255,255,0.22)', color: '#fff', borderColor: 'rgba(255,255,255,0.45)' };
+    if (isLamina) return { background: 'rgba(255,255,255,0.20)', color: '#fff', borderColor: 'rgba(255,255,255,0.42)' };
+    return { background: 'rgba(255,255,255,0.92)', color: '#7a9a18', borderColor: 'rgba(149,183,33,0.2)' };
+  };
+
   const getPrice = () => {
     if (isRitual) return 10;
     const nameLow = product.name?.toLowerCase() || "";
@@ -211,12 +255,7 @@ function ProductCard({ product, showActions = false }) {
         {/* Image area */}
         <div
           className="relative flex items-center justify-center overflow-hidden h-44 md:h-52 lg:h-60"
-          style={
-            isRitual ? { background: ritualTheme.bg }
-            : isFruta  ? { background: frutaTheme.bg }
-            : isLamina ? { background: laminaTheme.bg }
-            : { background: "linear-gradient(135deg, #f6fde8 0%, #eef8d0 100%)" }
-          }
+          style={{ background: getCardBg() }}
         >
           <img
             src={product.image}
@@ -227,12 +266,7 @@ function ProductCard({ product, showActions = false }) {
           {/* Price badge */}
           <div
             className="absolute top-3 right-3 backdrop-blur-sm font-black text-sm px-3 py-1 rounded-full shadow-sm border"
-            style={
-              isRitual ? { background: "rgba(255,255,255,0.18)", color: "#fff", borderColor: "rgba(255,255,255,0.4)" }
-              : isFruta  ? { background: "rgba(255,255,255,0.22)", color: "#fff", borderColor: "rgba(255,255,255,0.45)" }
-              : isLamina ? { background: "rgba(255,255,255,0.20)", color: "#fff", borderColor: "rgba(255,255,255,0.42)" }
-              : { background: "rgba(255,255,255,0.92)", color: "#7a9a18", borderColor: "rgba(149,183,33,0.2)" }
-            }
+            style={getPriceBadgeStyle()}
           >
             S/ {displayPrice}
           </div>
@@ -244,11 +278,11 @@ function ProductCard({ product, showActions = false }) {
           <div>
             <p
               className="text-[9px] font-bold uppercase tracking-widest mb-0.5"
-              style={{ color: isRitual ? ritualTheme.brand : isFruta ? frutaTheme.brand : isLamina ? laminaTheme.brand : "rgba(149,183,33,0.7)" }}
+              style={{ color: getBrandColor() }}
             >{product.brand}</p>
             <h3
               className="font-bold text-sm md:text-base leading-snug line-clamp-2"
-              style={{ color: isRitual ? ritualTheme.text : isFruta ? frutaTheme.text : isLamina ? laminaTheme.text : "#1f2937" }}
+              style={{ color: getNameColor() }}
             >{product.name}</h3>
           </div>
 
@@ -293,12 +327,7 @@ function ProductCard({ product, showActions = false }) {
               <button
                 onClick={handleAddToCart}
                 className="w-full flex items-center justify-center gap-2 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
-                style={
-                  isRitual  ? { background: `linear-gradient(to right, ${ritualTheme.accent}, ${ritualTheme.accentDark})` }
-                  : isFruta  ? { background: `linear-gradient(to right, ${frutaTheme.accent}, ${frutaTheme.accentDark})` }
-                  : isLamina ? { background: `linear-gradient(to right, ${laminaTheme.accent}, ${laminaTheme.accentDark})` }
-                  : { background: "linear-gradient(to right, #9ec425, #8ca91f)" }
-                }
+                style={{ background: getButtonBg() }}
               >
                 <span>＋</span>
                 <span>Añadir</span>
