@@ -1,9 +1,30 @@
+import { useState, useEffect } from "react";
 import { Navbar } from "../../components/navbar";
 import { Link } from "react-router-dom";
 import Footer from "../../components/footer";
-import Products from "../../components/products";
+import { fetchNews } from "../../services/api";
+import { Loader2, Calendar, Sparkles } from "lucide-react";
 
 const Home = () => {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadNews = async () => {
+      try {
+        const data = await fetchNews();
+        setNews(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar novedades.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadNews();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50/50">
       <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] pt-8 pb-12 flex flex-row justify-between px-4 md:justify-center items-center relative md:gap-0 shadow-sm">
@@ -46,38 +67,76 @@ const Home = () => {
           <div className="absolute top-1/2 right-8 -translate-y-1/2 w-32 h-32 bg-white/5 rounded-full" />
 
           {/* Contenido */}
-          <div className="relative z-10 flex flex-col items-center justify-center text-center py-16 px-8 gap-6">
-            <span className="inline-block bg-white/20 text-white text-sm font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-white/30 backdrop-blur-sm">
+          <div className="relative z-10 flex flex-col items-center justify-center text-center py-8 px-6 gap-4">
+            <span className="inline-block bg-white/20 text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm">
               🍓 Snacks Naturales Arequipeños
             </span>
-            <h2 className="text-4xl md:text-6xl font-black text-white drop-shadow-md leading-tight">
-              ¡Mira nuestro <br/>
+            <h2 className="text-3xl md:text-5xl font-black text-white drop-shadow-md leading-tight">
+              ¡Mira nuestro{" "}
               <span className="relative inline-block">
                 catálogo
-                <span className="absolute -bottom-1 left-0 right-0 h-1.5 bg-white/50 rounded-full" />
+                <span className="absolute -bottom-1 left-0 right-0 h-1 bg-white/50 rounded-full" />
               </span>
               {" "}aquí! 🛒
             </h2>
-            <p className="text-white/90 text-lg md:text-xl font-medium max-w-lg">
+            <p className="text-white/90 text-sm md:text-base font-medium max-w-lg">
               Frutas deshidratadas, rollitos saludables y mucho más. ¡Elige tus favoritos!
             </p>
             <Link
               to="/catalogo"
               onClick={() => window.scrollTo(0, 0)}
-              className="inline-flex items-center gap-3 bg-white text-[#8ca91f] font-extrabold py-4 px-10 rounded-full text-xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] hover:bg-[#e24052] hover:text-white transition-all duration-400 transform hover:-translate-y-1 hover:scale-105 group"
+              className="inline-flex items-center gap-2 bg-white text-[#8ca91f] font-extrabold py-2.5 px-8 rounded-full text-base shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:bg-[#e24052] hover:text-white transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-105 group"
             >
               <span>Ver Catálogo</span>
-              <span className="text-2xl group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+              <span className="text-xl group-hover:translate-x-1 transition-transform duration-300">→</span>
             </Link>
           </div>
         </div>
 
-        {/* ===== SECCIÓN DESCUBRE ===== */}
-        <div className="pt-8 border-t border-gray-100">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-[#8ca91f] text-center mb-12 tracking-tight">
-            Descubre nuestros Snacks 🍓
-          </h2>
-          <Products />
+        {/* ===== SECCIÓN NOVEDADES Y NOTICIAS ===== */}
+        <div className="pt-8 border-t border-gray-100 space-y-8">
+          <div className="flex flex-col items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-[#95b721]/10 text-[#8ca91f] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-[#95b721]/20">
+              <Sparkles className="h-3.5 w-3.5" /> Novedades y Novedades
+            </span>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-800 text-center tracking-tight">
+              Lo último de Abunga 📣
+            </h2>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-[#95b721]" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500 font-semibold">{error}</div>
+          ) : news.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 bg-white rounded-3xl border border-gray-100 p-8 shadow-xs">
+              No hay noticias publicadas en este momento. ¡Vuelve pronto!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {news.map((item) => (
+                <div key={item.id} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col hover:shadow-[0_15px_40px_rgba(149,183,33,0.08)] transition-all duration-300">
+                  {item.image && (
+                    <div className="h-56 w-full overflow-hidden shrink-0 border-b border-gray-50">
+                      <img src={item.image} alt={item.title} className="w-full h-full object-cover hover:scale-102 transition-transform duration-500" />
+                    </div>
+                  )}
+                  <div className="p-6 md:p-8 flex flex-col flex-1 justify-between gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+                        <Calendar className="h-3.5 w-3.5 text-[#95b721]/70" />
+                        <span>{new Date(item.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                      <h3 className="text-xl md:text-2xl font-black text-gray-800 leading-snug">{item.title}</h3>
+                      <p className="text-gray-500 text-sm md:text-base leading-relaxed whitespace-pre-wrap">{item.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </main>

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const Footer = () => {
   return (
     <footer className="bg-linear-to-b from-[#8ba91f] to-[#95b721] text-white py-12 mt-auto border-t border-[#8ba91f]/50">
@@ -21,6 +23,9 @@ const Footer = () => {
           <div className="text-center md:text-right">
             <p className="text-sm text-white/80">
               © {new Date().getFullYear()} Abunga
+            </p>
+            <p className="text-xs text-white/50 mt-1">
+              <Link to="/admin" className="hover:text-white transition-colors font-medium">Panel de Control</Link>
             </p>
             <p className="text-xs text-white/60 mt-1">
               Todos los derechos reservados a

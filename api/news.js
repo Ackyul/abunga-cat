@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { verifySession } from './auth.js';
 
 const FALLBACK_NEWS = [
   {
@@ -13,7 +14,7 @@ const FALLBACK_NEWS = [
 export default async function handler(req, res) {
   // Configuración de cabeceras CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -21,6 +22,7 @@ export default async function handler(req, res) {
   }
 
   const databaseUrl = process.env.DATABASE_URL;
+  const session = verifySession(req);
 
   if (!databaseUrl) {
     console.warn('⚠️ ADVERTENCIA: DATABASE_URL no está configurada. Usando fallback de noticias locales.');
@@ -41,6 +43,11 @@ export default async function handler(req, res) {
       return res.status(200).json(news);
     }
 
+    // A partir de aquí todas las operaciones de escritura REQUIEREN SESIÓN ADMIN
+    if (!session) {
+      return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión como administrador.' });
+    }
+
     // POST: Agregar noticia
     if (req.method === 'POST') {
       const { title, content, image } = req.body || {};
@@ -54,6 +61,24 @@ export default async function handler(req, res) {
         RETURNING *
       `;
       return res.status(201).json(result[0]);
+    }
+
+    // DELETE: Eliminar una noticia
+    if (req.method === 'DELETE') {
+      const { id } = req.query || {};
+      if (!id) {
+        return res.status(400).json({ error: 'El parámetro id es requerido.' });
+      }
+
+      const result = await sql`
+        DELETE FROM noticias
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Noticia no encontrada.' });
+      }
+      return res.status(200).json({ message: 'Noticia eliminada.', news: result[0] });
     }
 
     return res.status(405).json({ error: 'Método no permitido.' });

@@ -3,6 +3,7 @@ import Home from "../pages/Home/Home";
 import Nosotros from "../pages/Nosotros/Nosotros";
 import Catalogo from "../pages/Catalogo/Catalogo";
 import Cart from "../pages/Cart/Cart";
+import Admin from "../pages/Admin/Admin";
 
 function Router() {
   return (
@@ -12,6 +13,7 @@ function Router() {
         <Route path="/nosotros" element={<Nosotros />} />
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );

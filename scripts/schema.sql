@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS productos (
     image TEXT,
     precio NUMERIC(10, 2),
     precios JSONB,
-    brand VARCHAR(255) DEFAULT 'Abunga'
+    brand VARCHAR(255) DEFAULT 'Abunga',
+    visible BOOLEAN DEFAULT TRUE
 );
 
 -- Tabla de Noticias
