@@ -73,7 +73,10 @@ export default async function handler(req, res) {
         exp: Date.now() + 24 * 60 * 60 * 1000 // 24 horas
       }, jwtSecret);
       
-      res.setHeader('Set-Cookie', `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`);
+      const host = req.headers.host || '';
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+      const secureFlag = isLocalhost ? '' : 'Secure;';
+      res.setHeader('Set-Cookie', `admin_token=${token}; Path=/; HttpOnly; ${secureFlag} SameSite=Strict; Max-Age=86400`);
       return res.status(200).json({ success: true, email: adminEmail || 'admin@abunga.com' });
     }
     
@@ -168,7 +171,10 @@ export default async function handler(req, res) {
         exp: Date.now() + 24 * 60 * 60 * 1000 // 24 horas
       }, jwtSecret);
 
-      res.setHeader('Set-Cookie', `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`);
+      const hostHeader = req.headers.host || '';
+      const isLocal = hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1');
+      const secureF = isLocal ? '' : 'Secure;';
+      res.setHeader('Set-Cookie', `admin_token=${token}; Path=/; HttpOnly; ${secureF} SameSite=Strict; Max-Age=86400`);
       
       // Redirigir de vuelta al panel de administrador
       res.writeHead(302, { Location: '/admin' });
