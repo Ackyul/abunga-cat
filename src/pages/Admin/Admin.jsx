@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '../../components/navbar';
 import Footer from '../../components/footer';
 import { toast } from 'sonner';
-import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe } from 'lucide-react';
+import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search } from 'lucide-react';
 
 export default function Admin() {
   const [authLoading, setAuthLoading] = useState(true);
@@ -17,6 +17,8 @@ export default function Admin() {
   const [products, setProducts] = useState([]);
   const [news, setNews] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadingId, setUploadingId] = useState(null);
 
   // New product form state
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -122,6 +124,53 @@ export default function Admin() {
       toast.success('Sesión cerrada.');
     } catch (err) {
       toast.error('Error al cerrar sesión.');
+    }
+  };
+
+  // Upload image to Cloudinary via /api/upload
+  const handleImageUpload = async (productId, idx, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5 MB.');
+      return;
+    }
+    setUploadingId(productId);
+    try {
+      // Convert to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: base64, folder: 'abunga-products' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Error al subir imagen.');
+        return;
+      }
+
+      // Update local state with new URL
+      const updated = [...products];
+      updated[idx].image = data.url;
+      setProducts(updated);
+
+      // Auto-save to DB
+      await saveProduct(updated[idx]);
+      toast.success('Imagen actualizada correctamente.');
+    } catch (err) {
+      toast.error('Error al subir imagen. Intenta de nuevo.');
+    } finally {
+      setUploadingId(null);
     }
   };
 
@@ -439,20 +488,42 @@ export default function Admin() {
         ) : activeTab === 'products' ? (
           // TAB: PRODUCTS
           <div className="space-y-6 animate-fade-in-up">
-            <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 shrink-0">
                 <span>Catálogo de Productos</span>
                 <span className="text-xs bg-gray-100 text-[#95b721] font-black px-2.5 py-1 rounded-full border border-gray-200">
-                  {products.length} Items
+                  {products.filter(p => {
+                    const q = searchQuery.toLowerCase();
+                    return !q || p.name?.toLowerCase().includes(q) || p.tipo?.toLowerCase().includes(q) || p.fruta?.toLowerCase().includes(q);
+                  }).length} Items
                 </span>
               </h2>
-              <button
-                onClick={() => setShowAddProduct(!showAddProduct)}
-                className="bg-[#95b721] hover:bg-[#85a31d] text-white font-extrabold px-5 py-2.5 rounded-full text-sm shadow-md transition-all flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Agregar Producto</span>
-              </button>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                {/* Search bar */}
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, tipo o fruta..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    >✕</button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowAddProduct(!showAddProduct)}
+                  className="bg-[#95b721] hover:bg-[#85a31d] text-white font-extrabold px-5 py-2.5 rounded-full text-sm shadow-md transition-all flex items-center gap-2 shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Agregar</span>
+                </button>
+              </div>
             </div>
 
             {/* ADD PRODUCT FORM */}
@@ -589,30 +660,58 @@ export default function Admin() {
 
             {/* PRODUCT LIST */}
             <div className="space-y-4">
-              {products.map((product, idx) => {
+              {products
+                .filter(p => {
+                  const q = searchQuery.toLowerCase();
+                  return !q || p.name?.toLowerCase().includes(q) || p.tipo?.toLowerCase().includes(q) || p.fruta?.toLowerCase().includes(q);
+                })
+                .map((product) => {
+                const idx = products.findIndex(p => p.id === product.id);
                 // Asegurarse de que el campo precios esté formateado como objeto para los inputs
                 let preciosObj = product.precios || {};
                 if (typeof preciosObj === 'string') {
                   try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = {}; }
                 }
 
+                const isUploading = uploadingId === product.id;
+
                 return (
                   <div key={product.id} className={`bg-white rounded-3xl p-6 border shadow-xs transition-all flex flex-col md:flex-row gap-6 items-center ${
                     !product.visible ? 'border-dashed border-red-200 bg-red-50/10' : 'border-gray-100'
                   }`}>
-                    {/* Visual indicators */}
-                    <div className="relative shrink-0 w-24 h-24 bg-slate-50 border border-gray-100 rounded-2xl flex items-center justify-center overflow-hidden">
-                      {product.image ? (
+                    {/* Clickable image upload zone */}
+                    <label
+                      htmlFor={`img-upload-${product.id}`}
+                      className="relative shrink-0 w-24 h-24 bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer group hover:border-[#95b721] transition-all"
+                      title="Haz clic para subir imagen"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-8 w-8 text-[#95b721] animate-spin" />
+                      ) : product.image ? (
                         <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
                       ) : (
-                        <Globe className="h-10 w-10 text-gray-300" />
+                        <Globe className="h-10 w-10 text-gray-300 group-hover:text-[#95b721] transition-colors" />
                       )}
-                      {!product.visible && (
-                        <div className="absolute inset-0 bg-red-600/80 flex items-center justify-center text-white text-[10px] font-black uppercase">
+                      {/* Hover overlay */}
+                      {!isUploading && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 rounded-2xl">
+                          <Camera className="h-6 w-6 text-white" />
+                          <span className="text-white text-[9px] font-bold uppercase">Subir</span>
+                        </div>
+                      )}
+                      {!product.visible && !isUploading && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-red-600/85 flex items-center justify-center text-white text-[9px] font-black uppercase py-0.5">
                           Oculto
                         </div>
                       )}
-                    </div>
+                      <input
+                        id={`img-upload-${product.id}`}
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => handleImageUpload(product.id, idx, e.target.files[0])}
+                      />
+                    </label>
 
                     {/* Metadata edit */}
                     <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-4">
