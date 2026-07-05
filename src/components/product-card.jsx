@@ -3,11 +3,16 @@ import { cn } from "../lib/utils";
 import { PRECIOS } from "../lib/constants";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
+import useAuthStore from "../stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 function ProductCard({ product, showActions = false }) {
   const [selectedWeight, setSelectedWeight] = useState("50gr");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   if (!product) return null;
 
@@ -190,9 +195,30 @@ function ProductCard({ product, showActions = false }) {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if (!user) {
+      toast.error("Debes iniciar sesión para agregar productos al carrito.", {
+        action: {
+          label: "Ingresar",
+          onClick: () => navigate("/profile")
+        }
+      });
+      return;
+    }
     addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
   };
-  const handleIncrease = (e) => { e.stopPropagation(); updateQuantity(product.id, selectedWeight, cartItem.quantity + 1); };
+  const handleIncrease = (e) => { 
+    e.stopPropagation(); 
+    if (!user) {
+      toast.error("Debes iniciar sesión para agregar productos al carrito.", {
+        action: {
+          label: "Ingresar",
+          onClick: () => navigate("/profile")
+        }
+      });
+      return;
+    }
+    updateQuantity(product.id, selectedWeight, cartItem.quantity + 1); 
+  };
   const handleDecrease = (e) => {
     e.stopPropagation();
     if (cartItem.quantity > 1) updateQuantity(product.id, selectedWeight, cartItem.quantity - 1);

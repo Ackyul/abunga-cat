@@ -4,6 +4,9 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { cn } from "../lib/utils";
 import useCartStore from "../stores/useCartStore";
+import useAuthStore from "../stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const AVAILABLE_FRUITS = [
     "Fresa", "Kiwi", "Mango", 
@@ -15,6 +18,8 @@ export function MixtoBuilder() {
     const [selectedFruits, setSelectedFruits] = useState([]);
     const [selectedSize, setSelectedSize] = useState("50gr");
     const { addToCart } = useCartStore();
+    const { user } = useAuthStore();
+    const navigate = useNavigate();
 
     const prices = {
         "50gr": 20,
@@ -32,6 +37,15 @@ export function MixtoBuilder() {
     };
 
     const handleAddToCart = () => {
+        if (!user) {
+            toast.error("Debes iniciar sesión para agregar productos al carrito.", {
+                action: {
+                    label: "Ingresar",
+                    onClick: () => navigate("/profile")
+                }
+            });
+            return;
+        }
         const product = {
             id: `mixto-${Date.now()}`,
             name: "Mixto Fruta Deshidratada",

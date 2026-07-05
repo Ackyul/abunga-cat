@@ -4,10 +4,15 @@ import { PRECIOS } from "../lib/constants";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import useCartStore from "../stores/useCartStore";
+import useAuthStore from "../stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function ProductModal({ product, isOpen, onClose }) {
   const [selectedWeight, setSelectedWeight] = useState("50gr");
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   if (!product) return null;
 
@@ -128,10 +133,28 @@ export function ProductModal({ product, isOpen, onClose }) {
   );
 
   const handleAddToCart = () => {
+    if (!user) {
+      toast.error("Debes iniciar sesión para agregar productos al carrito.", {
+        action: {
+          label: "Ingresar",
+          onClick: () => navigate("/profile")
+        }
+      });
+      return;
+    }
     addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
   };
   
   const handleIncrease = () => {
+    if (!user) {
+      toast.error("Debes iniciar sesión para agregar productos al carrito.", {
+        action: {
+          label: "Ingresar",
+          onClick: () => navigate("/profile")
+        }
+      });
+      return;
+    }
     updateQuantity(product.id, selectedWeight, cartItem.quantity + 1);
   };
   
