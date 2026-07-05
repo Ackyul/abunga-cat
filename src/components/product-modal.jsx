@@ -3,10 +3,12 @@ import { Dialog, DialogContent } from "./ui/dialog";
 import { PRECIOS } from "../lib/constants";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
-// import useCartStore from "../stores/useCartStore";
+import useCartStore from "../stores/useCartStore";
 
 export function ProductModal({ product, isOpen, onClose }) {
   const [selectedWeight, setSelectedWeight] = useState("50gr");
+  const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
+
   if (!product) return null;
 
   // Detecta infusiones por tipo "Infusión" o por nombre "Ritual"
@@ -121,6 +123,33 @@ export function ProductModal({ product, isOpen, onClose }) {
   const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
   const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
 
+  const cartItem = cart.find(
+    (item) => item.id === product.id && item.selectedWeight === selectedWeight
+  );
+
+  const handleAddToCart = () => {
+    addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
+  };
+  
+  const handleIncrease = () => {
+    updateQuantity(product.id, selectedWeight, cartItem.quantity + 1);
+  };
+  
+  const handleDecrease = () => {
+    if (cartItem.quantity > 1) {
+      updateQuantity(product.id, selectedWeight, cartItem.quantity - 1);
+    } else {
+      removeFromCart(product.id, selectedWeight);
+    }
+  };
+
+  const getButtonBg = () => {
+    if (isRitual) return ritualTheme.accent;
+    if (isFruta) return frutaTheme.accent;
+    if (isLamina) return laminaTheme.accent;
+    return '#95b721';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 bg-white rounded-3xl h-[90vh] md:h-[600px] overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
@@ -191,7 +220,7 @@ export function ProductModal({ product, isOpen, onClose }) {
                 </div>
             )}
 
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto">
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto gap-4">
                 <div>
                      <p className="text-xs md:text-sm font-bold text-gray-500 uppercase mb-1">Precio</p>
                      <p
@@ -204,10 +233,33 @@ export function ProductModal({ product, isOpen, onClose }) {
                        }}
                      >S/ {displayPrice}</p>
                 </div>
-            </div>
-            
-             {/* Button removed */}
 
+                <div className="w-1/2 min-w-[150px]">
+                  {cartItem ? (
+                    <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
+                      <button 
+                        onClick={handleDecrease} 
+                        className="h-10 w-10 flex items-center justify-center bg-white rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-100 transition-colors border border-gray-100"
+                      >−</button>
+                      <span className="font-extrabold text-lg text-gray-800">{cartItem.quantity}</span>
+                      <button 
+                        onClick={handleIncrease} 
+                        className="h-10 w-10 flex items-center justify-center text-white rounded-xl shadow-sm font-bold hover:opacity-90 transition-opacity"
+                        style={{ background: getButtonBg() }}
+                      >+</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      className="w-full flex items-center justify-center gap-2 text-white font-extrabold py-3.5 rounded-2xl text-base transition-all shadow-md hover:shadow-lg transform active:scale-95 animate-fade-in"
+                      style={{ background: getButtonBg() }}
+                    >
+                      <span>＋</span>
+                      <span>Añadir al Carrito</span>
+                    </button>
+                  )}
+                </div>
+            </div>
         </div>
       </DialogContent>
     </Dialog>

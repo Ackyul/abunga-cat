@@ -4,6 +4,7 @@ import Nosotros from "../pages/Nosotros/Nosotros";
 import Catalogo from "../pages/Catalogo/Catalogo";
 import Cart from "../pages/Cart/Cart";
 import Admin from "../pages/Admin/Admin";
+import Profile from "../pages/Profile/Profile";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   );

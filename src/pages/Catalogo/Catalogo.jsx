@@ -67,6 +67,7 @@ const Catalogo = () => {
                                 tipo: "Mix",
                                 fruta: "Mix"
                             }} 
+                            showActions={true}
                         />
                       </div>
                   </Collapsible.Content>
@@ -101,6 +102,7 @@ const Catalogo = () => {
                                 tipo: "Mix",
                                 fruta: "Mix"
                             }} 
+                            showActions={true}
                         />
                       </div>
                   </Collapsible.Content>
@@ -121,6 +123,7 @@ const Catalogo = () => {
                         tipo: "Mix",
                         fruta: "Mix"
                     }} 
+                    showActions={true}
                 />
              </div>
           </div>

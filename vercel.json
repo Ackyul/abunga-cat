@@ -5,6 +5,10 @@
       "destination": "/api/auth"
     },
     {
+      "source": "/api/users/:action*",
+      "destination": "/api/users"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
