@@ -12,10 +12,22 @@ const FALLBACK_NEWS = [
 ];
 
 export default async function handler(req, res) {
-  // Configuración de cabeceras CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Cabeceras de seguridad
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+  const allowedOrigin = req.headers.origin || '';
+  const host = req.headers.host || '';
+  const isLocalDev = host.includes('localhost') || host.includes('127.0.0.1');
+  
+  if (isLocalDev) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin || '*');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -84,9 +96,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido.' });
   } catch (error) {
     console.error('❌ Error en API noticias:', error);
-    return res.status(500).json({ 
-      error: 'Error de base de datos o interno.', 
-      details: error.message 
-    });
+    return res.status(500).json({ error: 'Error interno del servidor.' });
   }
 }
