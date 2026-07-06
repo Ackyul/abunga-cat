@@ -47,8 +47,8 @@ export function Navbar() {
                 "px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 uppercase tracking-wider flex items-center gap-1.5 relative",
                 isCyber
                   ? (location.pathname === link.path
-                      ? "bg-white/95 text-[#a20087] shadow-lg shadow-[#a20087]/20 backdrop-blur-sm border border-[#a20087]/20"
-                      : "bg-[#a20087] text-white hover:bg-[#ff6b00] hover:shadow-md animate-pulse")
+                      ? "bg-white/95 text-[#e24052] shadow-lg shadow-[#e24052]/20 backdrop-blur-sm border border-[#e24052]/20"
+                      : "bg-[#e24052] text-white hover:bg-[#95b721] hover:shadow-md animate-pulse")
                   : (location.pathname === link.path
                       ? "bg-white/95 text-[#95b721] shadow-lg shadow-black/10 backdrop-blur-sm"
                       : "text-white/90 hover:text-white hover:bg-white/20 hover:shadow-sm")
@@ -164,8 +164,8 @@ export function Navbar() {
                     "w-full text-center py-4 px-6 rounded-2xl font-black text-xl uppercase tracking-wider transition-all duration-200 animate-fade-in-up",
                     isCyber
                       ? (location.pathname === link.path
-                          ? "bg-white text-[#a20087] shadow-xl shadow-[#a20087]/20 border border-[#a20087]/30"
-                          : "bg-[#a20087] text-white hover:bg-[#ff6b00] border-0 shadow-lg shadow-[#a20087]/25 animate-pulse")
+                          ? "bg-white text-[#e24052] shadow-xl shadow-[#e24052]/20 border border-[#e24052]/30"
+                          : "bg-[#e24052] text-white hover:bg-[#95b721] border-0 shadow-lg shadow-[#e24052]/25 animate-pulse")
                       : (location.pathname === link.path
                           ? "bg-white text-[#95b721] shadow-xl shadow-black/15"
                           : "bg-white/15 text-white hover:bg-white/25 border border-white/20")

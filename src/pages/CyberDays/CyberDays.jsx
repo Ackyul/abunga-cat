@@ -145,7 +145,7 @@ export default function CyberDays() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* ── HEADER ── */}
-      <header className="bg-gradient-to-br from-[#a20087] via-[#ff6b00] to-[#ffc700] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative gap-4 overflow-hidden shrink-0">
+      <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative gap-4 overflow-hidden shrink-0">
         {/* Decoraciones de fondo flotantes */}
         <div className="absolute top-10 left-10 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none animate-pulse"></div>
         <div className="absolute bottom-5 right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -162,21 +162,21 @@ export default function CyberDays() {
           {/* CyberDays Logo CSS Reconstructed */}
           <div className="hidden xl:flex flex-col items-center justify-center bg-white/95 backdrop-blur-md px-8 py-3 rounded-2xl shadow-2xl border border-white/20">
             <div className="flex items-center gap-2 mb-1">
-              {/* Círculo 1: Púrpura con Shopping Bag */}
-              <div className="w-8 h-8 bg-[#a20087] rounded-full flex items-center justify-center text-white shadow-md transform -rotate-12">
+              {/* Círculo 1: Coral con Shopping Bag */}
+              <div className="w-8 h-8 bg-[#e24052] rounded-full flex items-center justify-center text-white shadow-md transform -rotate-12">
                 <ShoppingBag className="w-4 h-4" />
               </div>
-              {/* Círculo 2: Amarillo con Cara Feliz */}
-              <div className="w-8 h-8 bg-[#ffc700] rounded-full flex items-center justify-center text-white shadow-md z-10">
+              {/* Círculo 2: Verde con Cara Feliz */}
+              <div className="w-8 h-8 bg-[#95b721] rounded-full flex items-center justify-center text-white shadow-md z-10">
                 <Smile className="w-4 h-4" />
               </div>
               {/* Círculo 3: Naranja con Porcentaje */}
-              <div className="w-8 h-8 bg-[#ff6b00] rounded-full flex items-center justify-center text-white shadow-md transform rotate-12">
+              <div className="w-8 h-8 bg-[#d08635] rounded-full flex items-center justify-center text-white shadow-md transform rotate-12">
                 <Percent className="w-4 h-4" />
               </div>
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-gray-900 uppercase leading-none">
-              Cyber<span className="text-[#a20087]">Days</span><span className="text-gray-500 font-normal text-lg lowercase">.pe</span>
+              Cyber<span className="text-[#e24052]">Days</span><span className="text-gray-500 font-normal text-lg lowercase">.pe</span>
             </h1>
           </div>
         </div>
@@ -185,9 +185,9 @@ export default function CyberDays() {
 
         {/* Rayas de separación estilo Abunga */}
         <div className="absolute bottom-0 left-0 right-0 flex flex-col">
-          <div className="h-1.5 bg-[#a20087]"></div>
-          <div className="h-1.5 bg-[#ff6b00]"></div>
-          <div className="h-1.5 bg-[#ffc700]"></div>
+          <div className="h-1.5 bg-[#e24052]"></div>
+          <div className="h-1.5 bg-[#d08635]"></div>
+          <div className="h-1.5 bg-[#e3c561]"></div>
         </div>
       </header>
 
@@ -198,7 +198,7 @@ export default function CyberDays() {
           <span>Modo Simulación Activo: Estás viendo el catálogo como si fuera el <strong>{currentDate.getDate()} de Julio, 2026</strong>.</span>
           <button 
             onClick={() => navigate("/cyberdays")}
-            className="underline ml-2 hover:text-[#a20087] transition-colors"
+            className="underline ml-2 hover:text-[#e24052] transition-colors"
           >
             Restaurar fecha real
           </button>
@@ -237,7 +237,7 @@ export default function CyberDays() {
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
                     isUnlocked 
                       ? "bg-[#ffc700] text-gray-900" 
-                      : "bg-[#a20087] text-white"
+                      : "bg-[#d08635] text-white"
                   }`}>
                     {isUnlocked ? (
                       <>
@@ -270,7 +270,7 @@ export default function CyberDays() {
                     /* Vector placeholder con los colores del cyber */
                     <div className={`w-32 h-32 rounded-3xl flex items-center justify-center transition-all ${
                       isUnlocked 
-                        ? "bg-gradient-to-tr from-[#a20087]/20 via-[#ff6b00]/20 to-[#ffc700]/20 text-[#ff6b00]" 
+                        ? "bg-gradient-to-tr from-[#e24052]/20 via-[#d08635]/20 to-[#e3c561]/20 text-[#d08635]" 
                         : "bg-gray-100 text-gray-300 blur-sm"
                     }`}>
                       <ShoppingBag className="w-16 h-16" />
@@ -280,7 +280,7 @@ export default function CyberDays() {
                   {/* Capa de Bloqueado (Overlay blur y candado) */}
                   {!isUnlocked && (
                     <div className="absolute inset-0 bg-black/45 backdrop-blur-md flex flex-col items-center justify-center text-white p-4">
-                      <div className="bg-[#a20087] p-4 rounded-full shadow-lg mb-3 animate-bounce">
+                      <div className="bg-[#e24052] p-4 rounded-full shadow-lg mb-3 animate-bounce">
                         <Lock className="w-6 h-6 text-white" />
                       </div>
                       <p className="font-extrabold uppercase tracking-widest text-sm">Próximo Lanzamiento</p>
@@ -290,7 +290,7 @@ export default function CyberDays() {
 
                   {/* Porcentaje de Descuento (Badge flotante) */}
                   {isUnlocked && (
-                    <div className="absolute top-4 right-4 bg-[#ff6b00] text-white font-black text-sm px-3 py-1.5 rounded-2xl shadow-lg animate-pulse">
+                    <div className="absolute top-4 right-4 bg-[#e24052] text-white font-black text-sm px-3 py-1.5 rounded-2xl shadow-lg animate-pulse">
                       -{product.discount}
                     </div>
                   )}
@@ -301,7 +301,7 @@ export default function CyberDays() {
                   <span className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">
                     {product.brand} • {product.weight}
                   </span>
-                  <h3 className="font-extrabold text-xl text-gray-900 group-hover:text-[#a20087] transition-colors mb-2">
+                  <h3 className="font-extrabold text-xl text-gray-900 group-hover:text-[#95b721] transition-colors mb-2">
                     {product.name}
                   </h3>
                   <p className="text-gray-500 text-sm leading-relaxed mb-6 flex-1">
@@ -332,7 +332,7 @@ export default function CyberDays() {
                     onClick={() => handleAddToCart(product)}
                     className={`w-full flex items-center justify-center gap-2 font-black py-4 px-6 rounded-2xl shadow-lg transition-all duration-300 ${
                       isUnlocked 
-                        ? "bg-[#a20087] hover:bg-[#ff6b00] text-white hover:scale-[1.02] active:scale-95 cursor-pointer" 
+                        ? "bg-[#95b721] hover:bg-[#e24052] text-white hover:scale-[1.02] active:scale-95 cursor-pointer" 
                         : "bg-gray-200 text-gray-400 cursor-not-allowed"
                     }`}
                   >

@@ -23,6 +23,15 @@ export default function BannerGenerator({ products = [] }) {
   const [imgXOffset, setImgXOffset] = useState(0);
   const [imgYOffset, setImgYOffset] = useState(0);
   
+  // Control de posición y tamaño del logo
+  const [logoScale, setLogoScale] = useState(1.0);
+  const [logoXOffset, setLogoXOffset] = useState(0);
+  const [logoYOffset, setLogoYOffset] = useState(0);
+  
+  // Control de posición de los textos
+  const [textXOffset, setTextXOffset] = useState(0);
+  const [textYOffset, setTextYOffset] = useState(0);
+  
   // Colores de textos
   const [titleColor, setTitleColor] = useState("#ffffff");
   const [subtitleColor, setSubtitleColor] = useState("#f3f4f6");
@@ -77,10 +86,9 @@ export default function BannerGenerator({ products = [] }) {
     }
   }, [productImgUrl]);
 
-  // 4. Dibujar Canvas cada vez que cambia un parámetro
   useEffect(() => {
     drawCanvas();
-  }, [logoImage, productImage, layout, bgStyle, title, subtitle, price, badgeText, imgScale, imgXOffset, imgYOffset, titleColor, subtitleColor, badgeColor]);
+  }, [logoImage, productImage, layout, bgStyle, title, subtitle, price, badgeText, imgScale, imgXOffset, imgYOffset, titleColor, subtitleColor, badgeColor, logoScale, logoXOffset, logoYOffset, textXOffset, textYOffset]);
 
   // Función principal de renderizado en Canvas (1080x1080 px para alta calidad)
   const drawCanvas = () => {
@@ -161,9 +169,9 @@ export default function BannerGenerator({ products = [] }) {
     // ── B. DIBUJAR LOGO (ARRIBA A LA DERECHA) ──
     if (logoImage) {
       // Logo Abunga en la esquina superior derecha
-      const logoSize = 160;
-      const logoX = 1080 - logoSize - 60;
-      const logoY = 60;
+      const logoSize = 160 * logoScale;
+      const logoX = 1080 - logoSize - 60 + logoXOffset;
+      const logoY = 60 + logoYOffset;
 
       // Dibujar fondo blanco sutil para el logo para que resalte
       ctx.save();
@@ -253,12 +261,12 @@ export default function BannerGenerator({ products = [] }) {
 
     if (layout === "publicidad") {
       // --- LAYOUT PUBLICIDAD: TEXTOS A LA DERECHA ---
-      const textX = 560;
+      const textX = 560 + textXOffset;
 
       // 1. Subtítulo (Marca/Categoría)
       ctx.fillStyle = subtitleColor;
       ctx.font = "800 32px sans-serif";
-      ctx.fillText(subtitle.toUpperCase(), textX, 390);
+      ctx.fillText(subtitle.toUpperCase(), textX, 390 + textYOffset);
 
       // 2. Título del Producto (con salto de línea si es largo)
       ctx.fillStyle = titleColor;
@@ -266,28 +274,26 @@ export default function BannerGenerator({ products = [] }) {
       
       const words = title.split(" ");
       let line = "";
-      let lineCount = 0;
       let startY = 440;
 
       for (let n = 0; n < words.length; n++) {
         let testLine = line + words[n] + " ";
         let metrics = ctx.measureText(testLine);
         if (metrics.width > 480 && n > 0) {
-          ctx.fillText(line, textX, startY);
+          ctx.fillText(line, textX, startY + textYOffset);
           line = words[n] + " ";
           startY += 80;
-          lineCount++;
         } else {
           line = testLine;
         }
       }
-      ctx.fillText(line, textX, startY);
+      ctx.fillText(line, textX, startY + textYOffset);
 
       // 3. Precio grande destacado
       const priceY = startY + 110;
       ctx.fillStyle = bgStyle === "limpio" ? "#95b721" : "#ffffff";
       ctx.font = "900 90px sans-serif";
-      ctx.fillText(price, textX, priceY);
+      ctx.fillText(price, textX, priceY + textYOffset);
 
     } else {
       // --- LAYOUT CENTRADO: TEXTOS AL PIE ---
@@ -295,19 +301,19 @@ export default function BannerGenerator({ products = [] }) {
       ctx.fillStyle = titleColor;
       ctx.font = "900 68px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(title, 540, 780);
+      ctx.fillText(title, 540 + textXOffset, 780 + textYOffset);
 
       // 2. Subtítulo Centrado
       ctx.fillStyle = subtitleColor;
       ctx.font = "700 32px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(subtitle, 540, 865);
+      ctx.fillText(subtitle, 540 + textXOffset, 865 + textYOffset);
 
       // 3. Precio Centrado
       ctx.fillStyle = bgStyle === "limpio" ? "#95b721" : "#ffc700";
       ctx.font = "900 80px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(price, 540, 920);
+      ctx.fillText(price, 540 + textXOffset, 920 + textYOffset);
     }
 
     ctx.restore();
@@ -331,11 +337,11 @@ export default function BannerGenerator({ products = [] }) {
       let rotateAngle = -10 * Math.PI / 180; // Inclinado 10 grados
 
       if (layout === "publicidad") {
-        bx = 560;
-        by = 310;
+        bx = 560 + textXOffset;
+        by = 310 + textYOffset;
       } else {
-        bx = 100;
-        by = 150;
+        bx = 100 + textXOffset;
+        by = 150 + textYOffset;
       }
 
       ctx.translate(bx + badgeW / 2, by + badgeH / 2);
@@ -618,6 +624,111 @@ export default function BannerGenerator({ products = [] }) {
                     className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
+              </div>
+          </div>
+
+          <hr className="border-gray-100" />
+
+          {/* Posicionamiento y tamaño del Logo */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
+              <Move className="w-4 h-4 text-gray-400" />
+              <span>Ajustes de Logo</span>
+            </h4>
+
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                  <span>Tamaño (Escala Logo)</span>
+                  <span>{Math.round(logoScale * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.3"
+                  max="2.0"
+                  step="0.05"
+                  value={logoScale}
+                  onChange={(e) => setLogoScale(parseFloat(e.target.value))}
+                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                    <span>Desplazamiento X</span>
+                    <span>{logoXOffset}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-800"
+                    max="400"
+                    step="5"
+                    value={logoXOffset}
+                    onChange={(e) => setLogoXOffset(parseInt(e.target.value))}
+                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                    <span>Desplazamiento Y</span>
+                    <span>{logoYOffset}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-200"
+                    max="800"
+                    step="5"
+                    value={logoYOffset}
+                    onChange={(e) => setLogoYOffset(parseInt(e.target.value))}
+                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr className="border-gray-100" />
+
+          {/* Posicionamiento de los Textos */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-gray-400" />
+              <span>Ajustes de Textos</span>
+            </h4>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                  <span>Desplazamiento X</span>
+                  <span>{textXOffset}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="-400"
+                  max="400"
+                  step="5"
+                  value={textXOffset}
+                  onChange={(e) => setTextXOffset(parseInt(e.target.value))}
+                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                  <span>Desplazamiento Y</span>
+                  <span>{textYOffset}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="-400"
+                  max="400"
+                  step="5"
+                  value={textYOffset}
+                  onChange={(e) => setTextYOffset(parseInt(e.target.value))}
+                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                />
               </div>
             </div>
           </div>

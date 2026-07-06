@@ -96,46 +96,51 @@ const Cart = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
                         {cart.map((item) => (
-                            <div key={`${item.id}-${item.selectedWeight}`} className="bg-white p-4 md:p-8 rounded-3xl border-2 border-gray-100 shadow-sm flex flex-row items-center gap-4 relative group overflow-hidden">
-                                <div className="h-20 w-20 md:h-24 md:w-24 shrink-0 bg-gray-50 rounded-xl p-2">
-                                     <img src={item.image} alt={item.name} className="h-full w-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
-                                </div>
-                                <div className="flex-1 text-left w-auto">
-                                    <h3 className="font-bold text-xl text-gray-900">{item.name}</h3>
-                                    <p className="text-gray-500 text-sm uppercase tracking-wide font-semibold">{item.brand}</p>
-                                    {item.fruits && item.fruits.length > 0 && (
-                                        <div className="mt-2 text-sm text-gray-500">
-                                            <span className="font-semibold">Contiene:</span> {item.fruits.join(", ")}
-                                        </div>
-                                    )}
-                                    <span className="inline-block mt-2 bg-[#f0fdf4] text-[#95b721] text-xs font-bold px-2 py-1 rounded-md border border-[#95b721]/20">
-                                        {item.selectedWeight}
-                                    </span>
+                            <div key={`${item.id}-${item.selectedWeight}`} className="bg-white p-5 rounded-3xl border-2 border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 relative group">
+                                {/* Info del producto (imagen + textos) */}
+                                <div className="flex flex-row items-start gap-4 flex-1">
+                                    <div className="h-20 w-20 md:h-24 md:w-24 shrink-0 bg-gray-50 rounded-xl p-2 flex items-center justify-center">
+                                         <img src={item.image} alt={item.name} className="h-full w-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                                    </div>
+                                    <div className="flex-1 text-left min-w-0 pr-8">
+                                        <h3 className="font-bold text-lg md:text-xl text-gray-900 leading-snug break-words">{item.name}</h3>
+                                        <p className="text-gray-500 text-xs md:text-sm uppercase tracking-wide font-semibold mt-0.5">{item.brand}</p>
+                                        {item.fruits && item.fruits.length > 0 && (
+                                            <div className="mt-1 text-xs md:text-sm text-gray-500 truncate">
+                                                <span className="font-semibold">Contiene:</span> {item.fruits.join(", ")}
+                                            </div>
+                                        )}
+                                        <span className="inline-block mt-2 bg-[#f0fdf4] text-[#95b721] text-xs font-bold px-2 py-0.5 rounded-md border border-[#95b721]/20">
+                                            {item.selectedWeight}
+                                        </span>
+                                    </div>
                                 </div>
                                 
-                                <div className="flex flex-col items-end gap-2 w-auto md:mr-12 mt-8 md:mt-0 ml-auto">
-                                    <p className="font-black text-lg md:text-2xl text-[#95b721]">S/ {(item.price * item.quantity).toFixed(2)}</p>
+                                {/* Controles (cantidad + precio) */}
+                                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 pt-3 md:pt-0 border-t border-gray-100 md:border-t-0 md:mr-12">
                                     <div className="flex items-center gap-3 bg-gray-100 rounded-full p-1">
                                         <button 
                                             onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity - 1)}
-                                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 disabled:opacity-50 text-xs md:text-base"
+                                            className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 disabled:opacity-50 text-sm"
                                             disabled={item.quantity <= 1}
                                         >
                                             -
                                         </button>
-                                        <span className="font-bold text-sm md:text-lg w-4 text-center">{item.quantity}</span>
+                                        <span className="font-bold text-sm md:text-lg w-5 text-center">{item.quantity}</span>
                                         <button 
                                             onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity + 1)}
-                                            className="h-6 w-6 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 text-xs md:text-base"
+                                            className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 text-sm"
                                         >
                                             +
                                         </button>
                                     </div>
+                                    <p className="font-black text-xl md:text-2xl text-[#95b721] shrink-0">S/ {(item.price * item.quantity).toFixed(2)}</p>
                                 </div>
 
+                                {/* Botón de eliminar */}
                                 <button 
                                     onClick={() => removeFromCart(item.id, item.selectedWeight)}
-                                    className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                                    className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
                                 >
                                     <Trash2 className="h-5 w-5" />
                                 </button>
