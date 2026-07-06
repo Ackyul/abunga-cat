@@ -28,19 +28,58 @@ export default function BannerGenerator({ products = [] }) {
   const [logoXOffset, setLogoXOffset] = useState(0);
   const [logoYOffset, setLogoYOffset] = useState(0);
   
-  // Control de posición de los textos
-  const [textXOffset, setTextXOffset] = useState(0);
-  const [textYOffset, setTextYOffset] = useState(0);
-  
-  // Colores de textos
+  // Control de posición, tamaño, color y rotación individual para cada elemento de texto:
+  // 1. TÍTULO
+  const [titleSize, setTitleSize] = useState(68);
+  const [titleXOffset, setTitleXOffset] = useState(0);
+  const [titleYOffset, setTitleYOffset] = useState(0);
   const [titleColor, setTitleColor] = useState("#ffffff");
+
+  // 2. SUBTÍTULO
+  const [subtitleSize, setSubtitleSize] = useState(32);
+  const [subtitleXOffset, setSubtitleXOffset] = useState(0);
+  const [subtitleYOffset, setSubtitleYOffset] = useState(0);
   const [subtitleColor, setSubtitleColor] = useState("#f3f4f6");
+
+  // 3. PRECIO
+  const [priceSize, setPriceSize] = useState(90);
+  const [priceXOffset, setPriceXOffset] = useState(0);
+  const [priceYOffset, setPriceYOffset] = useState(0);
+  const [priceColor, setPriceColor] = useState("#ffffff");
+
+  // 4. SELLO (STICKER)
+  const [badgeSize, setBadgeSize] = useState(24);
+  const [badgeXOffset, setBadgeXOffset] = useState(0);
+  const [badgeYOffset, setBadgeYOffset] = useState(0);
   const [badgeColor, setBadgeColor] = useState("#e24052"); // Rojo Abunga
+  const [badgeTextColor, setBadgeTextColor] = useState("#ffffff");
+  const [badgeRotation, setBadgeRotation] = useState(-10); // En grados
   
+  // Estado para la pestaña de edición activa
+  const [activeEditTab, setActiveEditTab] = useState("title");
+
   // Cargar imágenes en memoria para el Canvas
   const [logoImage, setLogoImage] = useState(null);
   const [productImage, setProductImage] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
+
+  // Efecto para ajustar automáticamente los colores por defecto según el fondo
+  useEffect(() => {
+    if (bgStyle === "limpio") {
+      setTitleColor("#2c3e02"); // Verde oliva muy oscuro para buen contraste
+      setSubtitleColor("#4d5f24"); 
+      setPriceColor("#95b721"); // Verde corporativo
+    } else if (bgStyle === "tropical") {
+      setTitleColor("#ffffff");
+      setSubtitleColor("#fef3c7"); // Crema
+      setPriceColor("#ffffff");
+    } else { // "verde"
+      setTitleColor("#ffffff");
+      setSubtitleColor("#f3f4f6");
+      setPriceColor(layout === "centrado" ? "#ffc700" : "#ffffff");
+    }
+  }, [bgStyle, layout]);
+
 
   // 1. Cargar el Logo de Abunga al iniciar
   useEffect(() => {
@@ -88,7 +127,16 @@ export default function BannerGenerator({ products = [] }) {
 
   useEffect(() => {
     drawCanvas();
-  }, [logoImage, productImage, layout, bgStyle, title, subtitle, price, badgeText, imgScale, imgXOffset, imgYOffset, titleColor, subtitleColor, badgeColor, logoScale, logoXOffset, logoYOffset, textXOffset, textYOffset]);
+  }, [
+    logoImage, productImage, layout, bgStyle, 
+    title, subtitle, price, badgeText, 
+    imgScale, imgXOffset, imgYOffset, 
+    logoScale, logoXOffset, logoYOffset,
+    titleSize, titleXOffset, titleYOffset, titleColor,
+    subtitleSize, subtitleXOffset, subtitleYOffset, subtitleColor,
+    priceSize, priceXOffset, priceYOffset, priceColor,
+    badgeSize, badgeXOffset, badgeYOffset, badgeColor, badgeTextColor, badgeRotation
+  ]);
 
   // Función principal de renderizado en Canvas (1080x1080 px para alta calidad)
   const drawCanvas = () => {
@@ -179,11 +227,17 @@ export default function BannerGenerator({ products = [] }) {
       ctx.shadowBlur = 20;
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 10, 0, Math.PI * 2);
+      ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
+      // Recortar la imagen en un círculo perfecto (oculta el fondo cuadrado/ondulado original)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+      ctx.clip();
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+      ctx.restore();
     }
 
     // ── C. DIBUJAR IMAGEN DEL PRODUCTO ──
@@ -261,59 +315,62 @@ export default function BannerGenerator({ products = [] }) {
 
     if (layout === "publicidad") {
       // --- LAYOUT PUBLICIDAD: TEXTOS A LA DERECHA ---
-      const textX = 560 + textXOffset;
 
       // 1. Subtítulo (Marca/Categoría)
       ctx.fillStyle = subtitleColor;
-      ctx.font = "800 32px sans-serif";
-      ctx.fillText(subtitle.toUpperCase(), textX, 390 + textYOffset);
+      ctx.font = `800 ${subtitleSize}px sans-serif`;
+      const subX = 560 + subtitleXOffset;
+      const subY = 390 + subtitleYOffset;
+      ctx.fillText(subtitle.toUpperCase(), subX, subY);
 
       // 2. Título del Producto (con salto de línea si es largo)
       ctx.fillStyle = titleColor;
-      ctx.font = "900 68px sans-serif";
+      ctx.font = `900 ${titleSize}px sans-serif`;
+      const titleX = 560 + titleXOffset;
+      let startY = 440 + titleYOffset;
       
       const words = title.split(" ");
       let line = "";
-      let startY = 440;
 
       for (let n = 0; n < words.length; n++) {
         let testLine = line + words[n] + " ";
         let metrics = ctx.measureText(testLine);
         if (metrics.width > 480 && n > 0) {
-          ctx.fillText(line, textX, startY + textYOffset);
+          ctx.fillText(line, titleX, startY);
           line = words[n] + " ";
-          startY += 80;
+          startY += titleSize + 12; // Espaciado proporcional al tamaño
         } else {
           line = testLine;
         }
       }
-      ctx.fillText(line, textX, startY + textYOffset);
+      ctx.fillText(line, titleX, startY);
 
       // 3. Precio grande destacado
-      const priceY = startY + 110;
-      ctx.fillStyle = bgStyle === "limpio" ? "#95b721" : "#ffffff";
-      ctx.font = "900 90px sans-serif";
-      ctx.fillText(price, textX, priceY + textYOffset);
+      const priceX = 560 + priceXOffset;
+      const priceY = startY + 110 + priceYOffset;
+      ctx.fillStyle = priceColor;
+      ctx.font = `900 ${priceSize}px sans-serif`;
+      ctx.fillText(price, priceX, priceY);
 
     } else {
       // --- LAYOUT CENTRADO: TEXTOS AL PIE ---
       // 1. Título Centrado
       ctx.fillStyle = titleColor;
-      ctx.font = "900 68px sans-serif";
+      ctx.font = `900 ${titleSize}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText(title, 540 + textXOffset, 780 + textYOffset);
+      ctx.fillText(title, 540 + titleXOffset, 780 + titleYOffset);
 
       // 2. Subtítulo Centrado
       ctx.fillStyle = subtitleColor;
-      ctx.font = "700 32px sans-serif";
+      ctx.font = `700 ${subtitleSize}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText(subtitle, 540 + textXOffset, 865 + textYOffset);
+      ctx.fillText(subtitle, 540 + subtitleXOffset, 865 + subtitleYOffset);
 
       // 3. Precio Centrado
-      ctx.fillStyle = bgStyle === "limpio" ? "#95b721" : "#ffc700";
-      ctx.font = "900 80px sans-serif";
+      ctx.fillStyle = priceColor;
+      ctx.font = `900 ${priceSize}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText(price, 540 + textXOffset, 920 + textYOffset);
+      ctx.fillText(price, 540 + priceXOffset, 920 + priceYOffset);
     }
 
     ctx.restore();
@@ -326,35 +383,35 @@ export default function BannerGenerator({ products = [] }) {
       ctx.shadowOffsetY = 6;
 
       ctx.fillStyle = badgeColor;
-      ctx.font = "black 24px sans-serif";
+      ctx.font = `900 ${badgeSize}px sans-serif`;
       const textWidth = ctx.measureText(badgeText).width;
       
       const badgeW = textWidth + 40;
-      const badgeH = 55;
+      const badgeH = badgeSize + 30; // Altura proporcional al tamaño del texto
       
       let bx = 0;
       let by = 0;
-      let rotateAngle = -10 * Math.PI / 180; // Inclinado 10 grados
+      let rotateAngle = (badgeRotation * Math.PI) / 180;
 
       if (layout === "publicidad") {
-        bx = 560 + textXOffset;
-        by = 310 + textYOffset;
+        bx = 560 + badgeXOffset;
+        by = 310 + badgeYOffset;
       } else {
-        bx = 100 + textXOffset;
-        by = 150 + textYOffset;
+        bx = 100 + badgeXOffset;
+        by = 150 + badgeYOffset;
       }
 
       ctx.translate(bx + badgeW / 2, by + badgeH / 2);
       ctx.rotate(rotateAngle);
       
       ctx.beginPath();
-      ctx.roundRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, 18);
+      ctx.roundRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, (badgeSize + 30) / 3);
       ctx.fill();
 
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = badgeTextColor;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "900 24px sans-serif";
+      ctx.font = `900 ${badgeSize}px sans-serif`;
       ctx.fillText(badgeText.toUpperCase(), 0, 1);
 
       ctx.restore();
@@ -399,6 +456,74 @@ export default function BannerGenerator({ products = [] }) {
       console.error(err);
       toast.error("Error al exportar la imagen. Verifica el origen de la imagen del producto (CORS).");
     }
+  };
+
+  const resetCurrentTab = () => {
+    switch (activeEditTab) {
+      case "title":
+        setTitleSize(68);
+        setTitleXOffset(0);
+        setTitleYOffset(0);
+        break;
+      case "subtitle":
+        setSubtitleSize(32);
+        setSubtitleXOffset(0);
+        setSubtitleYOffset(0);
+        break;
+      case "price":
+        setPriceSize(layout === "publicidad" ? 90 : 80);
+        setPriceXOffset(0);
+        setPriceYOffset(0);
+        break;
+      case "badge":
+        setBadgeSize(24);
+        setBadgeXOffset(0);
+        setBadgeYOffset(0);
+        setBadgeRotation(-10);
+        break;
+      case "product":
+        setImgScale(1.0);
+        setImgXOffset(0);
+        setImgYOffset(0);
+        break;
+      case "logo":
+        setLogoScale(1.0);
+        setLogoXOffset(0);
+        setLogoYOffset(0);
+        break;
+      default:
+        break;
+    }
+    toast.success("Ajustes del elemento activo restablecidos");
+  };
+
+  const resetAllAdjustments = () => {
+    setImgScale(1.0);
+    setImgXOffset(0);
+    setImgYOffset(0);
+    
+    setLogoScale(1.0);
+    setLogoXOffset(0);
+    setLogoYOffset(0);
+
+    setTitleSize(68);
+    setTitleXOffset(0);
+    setTitleYOffset(0);
+
+    setSubtitleSize(32);
+    setSubtitleXOffset(0);
+    setSubtitleYOffset(0);
+
+    setPriceSize(layout === "publicidad" ? 90 : 80);
+    setPriceXOffset(0);
+    setPriceYOffset(0);
+
+    setBadgeSize(24);
+    setBadgeXOffset(0);
+    setBadgeYOffset(0);
+    setBadgeRotation(-10);
+
+    toast.success("Todos los ajustes de posición y tamaño han sido restablecidos");
   };
 
   return (
@@ -568,218 +693,531 @@ export default function BannerGenerator({ products = [] }) {
 
           <hr className="border-gray-100" />
 
-          {/* Posicionamiento de la imagen del producto */}
+          {/* AJUSTES AVANZADOS INDIVIDUALES (TABS) */}
           <div className="space-y-4">
-            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-              <ZoomIn className="w-4 h-4 text-gray-400" />
-              <span>Ajustes de Imagen de Producto</span>
+            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+              <Layers className="w-4 h-4 text-gray-400" />
+              <span>Ajustes por Elemento</span>
             </h4>
 
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                  <span>Tamaño (Escala)</span>
-                  <span>{Math.round(imgScale * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.3"
-                  max="2.5"
-                  step="0.05"
-                  value={imgScale}
-                  onChange={(e) => setImgScale(parseFloat(e.target.value))}
-                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
+            {/* Selector de Pestañas */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 bg-gray-100 p-1 rounded-xl">
+              {[
+                { id: "title", label: "Título" },
+                { id: "subtitle", label: "Subtítulo" },
+                { id: "price", label: "Precio" },
+                { id: "badge", label: "Sello" },
+                { id: "product", label: "Producto" },
+                { id: "logo", label: "Logo" },
+              ].map((tab) => {
+                const active = activeEditTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveEditTab(tab.id)}
+                    className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer text-center ${
+                      active
+                        ? "bg-white text-[#95b721] shadow-xs"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-white/40"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                    <span>Desplazamiento X</span>
-                    <span>{imgXOffset}px</span>
+            {/* Contenido de la Pestaña Activa */}
+            <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/80 space-y-4">
+              
+              {activeEditTab === "title" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Título</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
                   </div>
-                  <input
-                    type="range"
-                    min="-400"
-                    max="400"
-                    step="5"
-                    value={imgXOffset}
-                    onChange={(e) => setImgXOffset(parseInt(e.target.value))}
-                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño de Letra</span>
+                      <span>{titleSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="20"
+                      max="120"
+                      step="1"
+                      value={titleSize}
+                      onChange={(e) => setTitleSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
 
-                <div>
-                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                    <span>Desplazamiento Y</span>
-                    <span>{imgYOffset}px</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{titleXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={titleXOffset}
+                        onChange={(e) => setTitleXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{titleYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={titleYOffset}
+                        onChange={(e) => setTitleYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="-400"
-                    max="400"
-                    step="5"
-                    value={imgYOffset}
-                    onChange={(e) => setImgYOffset(parseInt(e.target.value))}
-                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                  />
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color del Título</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={titleColor}
+                        onChange={(e) => setTitleColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                      />
+                      <span className="text-xs font-bold text-gray-700">{titleColor}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {activeEditTab === "subtitle" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Subtítulo</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño de Letra</span>
+                      <span>{subtitleSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="80"
+                      step="1"
+                      value={subtitleSize}
+                      onChange={(e) => setSubtitleSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{subtitleXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={subtitleXOffset}
+                        onChange={(e) => setSubtitleXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{subtitleYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={subtitleYOffset}
+                        onChange={(e) => setSubtitleYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color del Subtítulo</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={subtitleColor}
+                        onChange={(e) => setSubtitleColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                      />
+                      <span className="text-xs font-bold text-gray-700">{subtitleColor}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeEditTab === "price" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Precio</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño del Precio</span>
+                      <span>{priceSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="30"
+                      max="150"
+                      step="1"
+                      value={priceSize}
+                      onChange={(e) => setPriceSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{priceXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={priceXOffset}
+                        onChange={(e) => setPriceXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{priceYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={priceYOffset}
+                        onChange={(e) => setPriceYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color del Precio</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={priceColor}
+                        onChange={(e) => setPriceColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                      />
+                      <span className="text-xs font-bold text-gray-700">{priceColor}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeEditTab === "badge" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Sello / Sticker</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño de Letra Sello</span>
+                      <span>{badgeSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="60"
+                      step="1"
+                      value={badgeSize}
+                      onChange={(e) => setBadgeSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{badgeXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={badgeXOffset}
+                        onChange={(e) => setBadgeXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{badgeYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={badgeYOffset}
+                        onChange={(e) => setBadgeYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Rotación del Sello</span>
+                      <span>{badgeRotation}°</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value={badgeRotation}
+                      onChange={(e) => setBadgeRotation(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color Fondo</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={badgeColor}
+                          onChange={(e) => setBadgeColor(e.target.value)}
+                          className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                        />
+                        <span className="text-xs font-bold text-gray-700">{badgeColor}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color Texto</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={badgeTextColor}
+                          onChange={(e) => setBadgeTextColor(e.target.value)}
+                          className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                        />
+                        <span className="text-xs font-bold text-gray-700">{badgeTextColor}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeEditTab === "product" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición de Imagen del Producto</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño (Escala)</span>
+                      <span>{Math.round(imgScale * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.3"
+                      max="2.5"
+                      step="0.05"
+                      value={imgScale}
+                      onChange={(e) => setImgScale(parseFloat(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{imgXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-400"
+                        max="400"
+                        step="5"
+                        value={imgXOffset}
+                        onChange={(e) => setImgXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{imgYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-400"
+                        max="400"
+                        step="5"
+                        value={imgYOffset}
+                        onChange={(e) => setImgYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeEditTab === "logo" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Logo</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño (Escala Logo)</span>
+                      <span>{Math.round(logoScale * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.3"
+                      max="2.0"
+                      step="0.05"
+                      value={logoScale}
+                      onChange={(e) => setLogoScale(parseFloat(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{logoXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-800"
+                        max="400"
+                        step="5"
+                        value={logoXOffset}
+                        onChange={(e) => setLogoXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{logoYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-200"
+                        max="800"
+                        step="5"
+                        value={logoYOffset}
+                        onChange={(e) => setLogoYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
           <hr className="border-gray-100" />
 
-          {/* Posicionamiento y tamaño del Logo */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-              <Move className="w-4 h-4 text-gray-400" />
-              <span>Ajustes de Logo</span>
-            </h4>
-
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                  <span>Tamaño (Escala Logo)</span>
-                  <span>{Math.round(logoScale * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.3"
-                  max="2.0"
-                  step="0.05"
-                  value={logoScale}
-                  onChange={(e) => setLogoScale(parseFloat(e.target.value))}
-                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                    <span>Desplazamiento X</span>
-                    <span>{logoXOffset}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-800"
-                    max="400"
-                    step="5"
-                    value={logoXOffset}
-                    onChange={(e) => setLogoXOffset(parseInt(e.target.value))}
-                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                    <span>Desplazamiento Y</span>
-                    <span>{logoYOffset}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-200"
-                    max="800"
-                    step="5"
-                    value={logoYOffset}
-                    onChange={(e) => setLogoYOffset(parseInt(e.target.value))}
-                    className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <hr className="border-gray-100" />
-
-          {/* Posicionamiento de los Textos */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <span>Ajustes de Textos</span>
-            </h4>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                  <span>Desplazamiento X</span>
-                  <span>{textXOffset}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="-400"
-                  max="400"
-                  step="5"
-                  value={textXOffset}
-                  onChange={(e) => setTextXOffset(parseInt(e.target.value))}
-                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
-                  <span>Desplazamiento Y</span>
-                  <span>{textYOffset}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="-400"
-                  max="400"
-                  step="5"
-                  value={textYOffset}
-                  onChange={(e) => setTextYOffset(parseInt(e.target.value))}
-                  className="w-full accent-[#95b721] h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          <hr className="border-gray-100" />
-
-          {/* Colores de Textos */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-gray-700 uppercase tracking-widest">Colores del Contenido</h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Título</label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={titleColor}
-                    onChange={(e) => setTitleColor(e.target.value)}
-                    className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
-                  />
-                  <span className="text-xs font-bold text-gray-700">{titleColor}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Subtítulo</label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={subtitleColor}
-                    onChange={(e) => setSubtitleColor(e.target.value)}
-                    className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
-                  />
-                  <span className="text-xs font-bold text-gray-700">{subtitleColor}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Sticker</label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={badgeColor}
-                    onChange={(e) => setBadgeColor(e.target.value)}
-                    className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
-                  />
-                  <span className="text-xs font-bold text-gray-700">{badgeColor}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* BOTÓN RESTABLECER TODO */}
+          <button
+            type="button"
+            onClick={resetAllAdjustments}
+            className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 font-bold text-xs rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Restablecer Todos los Ajustes del Banner</span>
+          </button>
 
         </div>
       </div>

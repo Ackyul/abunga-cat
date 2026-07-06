@@ -53,3 +53,5 @@ temp/
 .cache/
 .parcel-cache/
 .eslintcache
+
+.vercel
