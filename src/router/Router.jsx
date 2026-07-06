@@ -5,6 +5,7 @@ import Catalogo from "../pages/Catalogo/Catalogo";
 import Cart from "../pages/Cart/Cart";
 import Admin from "../pages/Admin/Admin";
 import Profile from "../pages/Profile/Profile";
+import CyberDays from "../pages/CyberDays/CyberDays";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/cyberdays" element={<CyberDays />} />
       </Routes>
     </BrowserRouter>
   );

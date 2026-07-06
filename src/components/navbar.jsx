@@ -30,26 +30,34 @@ export function Navbar() {
     { path: "/", label: "Descubre" },
     { path: "/nosotros", label: "Nosotros" },
     { path: "/catalogo", label: "Catálogo" },
+    { path: "/cyberdays", label: "CyberDays ⚡" },
   ];
 
   return (
     <>
       {/* ── DESKTOP nav (md+) ── */}
       <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 items-center gap-3 z-20 animate-fade-in">
-        {navLinks.map((link) => (
-          <Link
-            key={link.path}
-            to={link.path}
-            className={cn(
-              "px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 uppercase tracking-wider",
-              location.pathname === link.path
-                ? "bg-white/95 text-[#95b721] shadow-lg shadow-black/10 backdrop-blur-sm"
-                : "text-white/90 hover:text-white hover:bg-white/20 hover:shadow-sm"
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
+        {navLinks.map((link) => {
+          const isCyber = link.path === "/cyberdays";
+          return (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={cn(
+                "px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 uppercase tracking-wider flex items-center gap-1.5 relative",
+                isCyber
+                  ? (location.pathname === link.path
+                      ? "bg-white/95 text-[#a20087] shadow-lg shadow-[#a20087]/20 backdrop-blur-sm border border-[#a20087]/20"
+                      : "bg-[#a20087] text-white hover:bg-[#ff6b00] hover:shadow-md animate-pulse")
+                  : (location.pathname === link.path
+                      ? "bg-white/95 text-[#95b721] shadow-lg shadow-black/10 backdrop-blur-sm"
+                      : "text-white/90 hover:text-white hover:bg-white/20 hover:shadow-sm")
+              )}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
 
         {/* Desktop Cart */}
         <Link
@@ -144,22 +152,29 @@ export function Navbar() {
 
           {/* Menu links */}
           <nav className="flex-1 flex flex-col justify-center items-center gap-4 px-8">
-            {navLinks.map((link, i) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setMenuOpen(false)}
-                style={{ animationDelay: `${i * 60}ms` }}
-                className={cn(
-                  "w-full text-center py-4 px-6 rounded-2xl font-black text-xl uppercase tracking-wider transition-all duration-200 animate-fade-in-up",
-                  location.pathname === link.path
-                    ? "bg-white text-[#95b721] shadow-xl shadow-black/15"
-                    : "bg-white/15 text-white hover:bg-white/25 border border-white/20"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link, i) => {
+              const isCyber = link.path === "/cyberdays";
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMenuOpen(false)}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className={cn(
+                    "w-full text-center py-4 px-6 rounded-2xl font-black text-xl uppercase tracking-wider transition-all duration-200 animate-fade-in-up",
+                    isCyber
+                      ? (location.pathname === link.path
+                          ? "bg-white text-[#a20087] shadow-xl shadow-[#a20087]/20 border border-[#a20087]/30"
+                          : "bg-[#a20087] text-white hover:bg-[#ff6b00] border-0 shadow-lg shadow-[#a20087]/25 animate-pulse")
+                      : (location.pathname === link.path
+                          ? "bg-white text-[#95b721] shadow-xl shadow-black/15"
+                          : "bg-white/15 text-white hover:bg-white/25 border border-white/20")
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
 
             {/* Mobile Account link */}
             <Link

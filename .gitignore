@@ -21,6 +21,7 @@ dist-ssr
 .env.production.local
 .env.production
 .env.staging
+.vercel
 
 # Editor directories and files
 .vscode/*

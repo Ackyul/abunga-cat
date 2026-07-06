@@ -75,8 +75,65 @@ function verifyPassword(password, storedPassword) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ENVÍO DE EMAILS MEDIANTE RESEND
+// ═══════════════════════════════════════════════════════════════
+
+async function sendRecoveryEmail(email, code) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️ Advertencia: RESEND_API_KEY no está configurada en .env.");
+    return false;
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Abunga Seguridad <seguridad@abungasaborqueretumba.com>",
+        to: [email],
+        subject: "Código de recuperación de contraseña - Abunga",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #eee; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #95b721; margin: 0; font-size: 28px; font-weight: 800;">abunga</h2>
+              <p style="color: #666; margin: 5px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Snacks Naturales</p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+            <h3 style="color: #333; font-size: 20px; font-weight: 700; margin-bottom: 15px;">Recuperación de Contraseña</h3>
+            <p style="color: #555; line-height: 1.6; font-size: 16px;">Has solicitado restablecer tu contraseña de Abunga. Utiliza el siguiente código de verificación de 6 dígitos para completar el proceso:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <span style="display: inline-block; font-family: monospace; font-size: 36px; font-weight: 900; letter-spacing: 6px; background-color: #f9f9f9; padding: 15px 30px; border-radius: 15px; border: 2px dashed #95b721; color: #a20087; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                ${code}
+              </span>
+            </div>
+            <p style="color: #888; font-size: 13px; line-height: 1.5;">Este código es de un solo uso y expirará en <strong>15 minutos</strong> por motivos de seguridad.</p>
+            <p style="color: #555; line-height: 1.6; font-size: 16px;">Si tú no solicitaste este cambio, puedes ignorar este correo con total tranquilidad. Tu cuenta sigue estando segura.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+            <p style="color: #aaa; font-size: 11px; text-align: center; margin: 0;">© ${new Date().getFullYear()} Abunga · Arequipa, Perú. Todos los derechos reservados.</p>
+          </div>
+        `
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      console.error("❌ Error de Resend API:", errData);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("❌ Error de red con Resend:", err);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  RATE LIMITING EN MEMORIA (por IP, por acción)
-//  Protección contra fuerza bruta en login y registro
+//  Protección contra fuerza bruta en login, registro y recuperación
 // ═══════════════════════════════════════════════════════════════
 
 const rateLimitMap = new Map();
@@ -125,7 +182,7 @@ const MAX_BODY_SIZE = 1024 * 512; // 512 KB máximo para el body
 
 function sanitizeString(str) {
   if (typeof str !== 'string') return '';
-  return str.trim().replace(/[<>]/g, ''); // Elimina < y > para prevenir inyección HTML en respuestas
+  return str.trim().replace(/[<>]/g, ''); // Elimina < y > para prevenir inyección HTML
 }
 
 function validateCartItem(item) {
@@ -156,7 +213,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
 
-  // CORS estricto: solo mismo origen
+  // CORS estricto
   const allowedOrigin = req.headers.origin || '';
   const host = req.headers.host || '';
   const isLocalDev = host.includes('localhost') || host.includes('127.0.0.1');
@@ -164,7 +221,6 @@ export default async function handler(req, res) {
   if (isLocalDev) {
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin || '*');
   } else {
-    // En producción, solo aceptar peticiones del mismo dominio
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
@@ -175,7 +231,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Validar tamaño del body para prevenir DoS
+  // Validar tamaño del body
   const contentLength = parseInt(req.headers['content-length'] || '0', 10);
   if (contentLength > MAX_BODY_SIZE) {
     return res.status(413).json({ error: 'Payload demasiado grande.' });
@@ -215,14 +271,12 @@ export default async function handler(req, res) {
   try {
     // ─── 1. POST /api/users/register ────────────────────────────
     if (action === 'register' && req.method === 'POST') {
-      // Rate limiting
       if (isRateLimited(clientIp, 'register')) {
         return res.status(429).json({ error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' });
       }
 
       const { name, email, password } = req.body || {};
       
-      // Validaciones estrictas
       if (!name || !email || !password) {
         return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos.' });
       }
@@ -242,9 +296,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `La contraseña debe tener entre ${MIN_PASSWORD_LENGTH} y ${MAX_PASSWORD_LENGTH} caracteres.` });
       }
 
-      // Verificar existencia con timing constante (siempre ejecutar hash)
       const existingUser = await sql`SELECT id FROM usuarios WHERE email = ${cleanEmail}`;
-      
       if (existingUser.length > 0) {
         return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
       }
@@ -264,7 +316,6 @@ export default async function handler(req, res) {
 
     // ─── 2. POST /api/users/login ───────────────────────────────
     if (action === 'login' && req.method === 'POST') {
-      // Rate limiting
       if (isRateLimited(clientIp, 'login')) {
         return res.status(429).json({ error: 'Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.' });
       }
@@ -281,11 +332,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Correo electrónico o contraseña incorrectos.' });
       }
 
-      // Buscar usuario
       const users = await sql`SELECT * FROM usuarios WHERE email = ${cleanEmail}`;
       
       if (users.length === 0) {
-        // Ejecutar hash ficticio para evitar timing attacks que revelen si el email existe
         hashPassword('dummy-password-timing-safe');
         return res.status(401).json({ error: 'Correo electrónico o contraseña incorrectos.' });
       }
@@ -299,7 +348,6 @@ export default async function handler(req, res) {
 
       setSessionCookie(user);
       
-      // Nunca retornar el hash de contraseña
       const { password_hash, ...safeUser } = user;
       return res.status(200).json({ success: true, user: safeUser });
     }
@@ -316,7 +364,6 @@ export default async function handler(req, res) {
     if (action === 'session' && req.method === 'GET') {
       const session = verifyUserSession(req);
       if (session) {
-        // Solo devolver datos no sensibles
         const users = await sql`SELECT id, name, email, cart, created_at FROM usuarios WHERE id = ${session.id}`;
         if (users.length > 0) {
           return res.status(200).json({ authenticated: true, user: users[0] });
@@ -325,10 +372,138 @@ export default async function handler(req, res) {
       return res.status(200).json({ authenticated: false });
     }
 
-    // ─── 5. Operaciones de carrito (requieren sesión) ───────────
+    // ─── 5. POST /api/users/forgot-password ──────────────────────
+    if (action === 'forgot-password' && req.method === 'POST') {
+      if (isRateLimited(clientIp, 'forgot_password')) {
+        return res.status(429).json({ error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' });
+      }
+      const { email } = req.body || {};
+      if (!email) {
+        return res.status(400).json({ error: 'El correo electrónico es requerido.' });
+      }
+      const cleanEmail = sanitizeString(email).toLowerCase();
+      if (!EMAIL_REGEX.test(cleanEmail)) {
+        return res.status(400).json({ error: 'Formato de correo electrónico inválido.' });
+      }
+
+      const userResult = await sql`SELECT id FROM usuarios WHERE email = ${cleanEmail}`;
+      if (userResult.length === 0) {
+        // Responder con éxito simulado para evitar enumeración de usuarios
+        return res.status(200).json({ success: true, message: 'Si el correo está registrado, recibirás un código de verificación.' });
+      }
+
+      // Código de 6 dígitos aleatorio
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos de validez
+
+      await sql`
+        UPDATE usuarios 
+        SET recovery_code = ${code}, recovery_expires = ${expires} 
+        WHERE email = ${cleanEmail}
+      `;
+
+      const sent = await sendRecoveryEmail(cleanEmail, code);
+      console.log(`[RECOVERY CODE FOR ${cleanEmail}]: ${code} (Enviado: ${sent ? 'SÍ' : 'NO - Resend no configurado o fallido'})`);
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Si el correo está registrado, recibirás un código de verificación.',
+        // Si no se pudo enviar y estamos en desarrollo local, exponemos el código para que prueben sin problemas
+        ...(isLocalDev && !sent ? { devCode: code } : {})
+      });
+    }
+
+    // ─── 6. POST /api/users/reset-password ──────────────────────
+    if (action === 'reset-password' && req.method === 'POST') {
+      if (isRateLimited(clientIp, 'reset_password')) {
+        return res.status(429).json({ error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' });
+      }
+      const { email, code, newPassword } = req.body || {};
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+      }
+
+      const cleanEmail = sanitizeString(email).toLowerCase();
+      const cleanCode = sanitizeString(code).trim();
+
+      if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: `La contraseña debe tener entre ${MIN_PASSWORD_LENGTH} y ${MAX_PASSWORD_LENGTH} caracteres.` });
+      }
+
+      const userResult = await sql`SELECT id, recovery_code, recovery_expires FROM usuarios WHERE email = ${cleanEmail}`;
+      if (userResult.length === 0) {
+        return res.status(400).json({ error: 'Código o correo incorrecto.' });
+      }
+
+      const user = userResult[0];
+      if (!user.recovery_code || !user.recovery_expires) {
+        return res.status(400).json({ error: 'No se ha solicitado recuperación de contraseña.' });
+      }
+
+      const now = new Date();
+      const expires = new Date(user.recovery_expires);
+
+      if (now > expires) {
+        return res.status(400).json({ error: 'El código ha expirado.' });
+      }
+
+      const codeBuffer = Buffer.from(user.recovery_code);
+      const inputBuffer = Buffer.from(cleanCode);
+      
+      let isCodeValid = false;
+      if (codeBuffer.length === inputBuffer.length) {
+        isCodeValid = crypto.timingSafeEqual(codeBuffer, inputBuffer);
+      } else {
+        crypto.timingSafeEqual(codeBuffer, codeBuffer);
+      }
+
+      if (!isCodeValid) {
+        return res.status(400).json({ error: 'Código de verificación incorrecto.' });
+      }
+
+      const passwordHash = hashPassword(newPassword);
+
+      await sql`
+        UPDATE usuarios 
+        SET password_hash = ${passwordHash}, recovery_code = NULL, recovery_expires = NULL 
+        WHERE email = ${cleanEmail}
+      `;
+
+      return res.status(200).json({ success: true, message: 'Tu contraseña ha sido restablecida con éxito.' });
+    }
+
+    // ─── 7. Operaciones que requieren sesión activa ──────────────
     const session = verifyUserSession(req);
     if (!session) {
       return res.status(401).json({ error: 'No autorizado. Debe iniciar sesión.' });
+    }
+
+    // POST /api/users/change-password
+    if (action === 'change-password' && req.method === 'POST') {
+      const { currentPassword, newPassword } = req.body || {};
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+      }
+
+      if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: `La nueva contraseña debe tener entre ${MIN_PASSWORD_LENGTH} y ${MAX_PASSWORD_LENGTH} caracteres.` });
+      }
+
+      const userResult = await sql`SELECT * FROM usuarios WHERE id = ${session.id}`;
+      if (userResult.length === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado.' });
+      }
+
+      const user = userResult[0];
+      const isPasswordCorrect = verifyPassword(currentPassword, user.password_hash);
+      if (!isPasswordCorrect) {
+        return res.status(400).json({ error: 'La contraseña actual es incorrecta.' });
+      }
+
+      const newHash = hashPassword(newPassword);
+      await sql`UPDATE usuarios SET password_hash = ${newHash} WHERE id = ${session.id}`;
+
+      return res.status(200).json({ success: true, message: 'Contraseña actualizada con éxito.' });
     }
 
     // GET /api/users/cart
@@ -348,7 +523,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'El carrito contiene datos inválidos.' });
       }
 
-      // Sanitizar cada ítem del carrito antes de guardar
       const sanitizedCart = cart.map(item => ({
         id: item.id,
         name: typeof item.name === 'string' ? sanitizeString(item.name).substring(0, 255) : '',
@@ -375,7 +549,6 @@ export default async function handler(req, res) {
 
     return res.status(404).json({ error: 'Acción no encontrada.' });
   } catch (error) {
-    // NUNCA exponer detalles internos del error al cliente en producción
     console.error('❌ Error en API de usuarios:', error);
     return res.status(500).json({ error: 'Error interno del servidor.' });
   }
