@@ -159,24 +159,10 @@ export default function CyberDays() {
             />
           </Link>
 
-          {/* CyberDays Logo CSS Reconstructed */}
-          <div className="hidden xl:flex flex-col items-center justify-center bg-white/95 backdrop-blur-md px-8 py-3 rounded-2xl shadow-2xl border border-white/20">
-            <div className="flex items-center gap-2 mb-1">
-              {/* Círculo 1: Coral con Shopping Bag */}
-              <div className="w-8 h-8 bg-[#e24052] rounded-full flex items-center justify-center text-white shadow-md transform -rotate-12">
-                <ShoppingBag className="w-4 h-4" />
-              </div>
-              {/* Círculo 2: Verde con Cara Feliz */}
-              <div className="w-8 h-8 bg-[#95b721] rounded-full flex items-center justify-center text-white shadow-md z-10">
-                <Smile className="w-4 h-4" />
-              </div>
-              {/* Círculo 3: Naranja con Porcentaje */}
-              <div className="w-8 h-8 bg-[#d08635] rounded-full flex items-center justify-center text-white shadow-md transform rotate-12">
-                <Percent className="w-4 h-4" />
-              </div>
-            </div>
-            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-gray-900 uppercase leading-none">
-              Cyber<span className="text-[#e24052]">Days</span><span className="text-gray-500 font-normal text-lg lowercase">.pe</span>
+          {/* CyberDays Logo */}
+          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-8 py-4 rounded-2xl shadow-2xl border border-white/20">
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 uppercase leading-none">
+              Cyber<span className="text-[#e24052]">Days</span>
             </h1>
           </div>
         </div>
@@ -301,12 +287,9 @@ export default function CyberDays() {
                   <span className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">
                     {product.brand} • {product.weight}
                   </span>
-                  <h3 className="font-extrabold text-xl text-gray-900 group-hover:text-[#95b721] transition-colors mb-2">
+                  <h3 className="font-extrabold text-xl text-gray-900 group-hover:text-[#95b721] transition-colors mb-6">
                     {product.name}
                   </h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-6 flex-1">
-                    {product.description}
-                  </p>
 
                   {/* Precios */}
                   <div className="flex items-baseline gap-2 mb-6">
