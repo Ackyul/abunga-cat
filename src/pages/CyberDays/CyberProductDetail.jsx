@@ -158,7 +158,7 @@ export default function CyberProductDetail() {
               <Clock className="w-4 h-4" /> Oferta no disponible aún
             </span>
             
-            <h2 className="text-3xl font-black text-gray-900 mb-4">{product.name}</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-4">Oferta Sorpresa 🎁</h2>
             <p className="text-gray-500 max-w-md mb-8">
               Esta es una oferta exclusiva de CyberDays y se desbloqueará el día <strong>{product.unlockDay} de Julio de 2026</strong>. ¡Vuelve pronto para no perdértela!
             </p>

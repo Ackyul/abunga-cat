@@ -253,7 +253,7 @@ export default function CyberDays() {
                   {product.image ? (
                     <img 
                       src={product.image} 
-                      alt={product.name} 
+                      alt={isUnlocked ? product.name : "Oferta Sorpresa"} 
                       className={`h-full object-contain transition-transform duration-500 ${
                         isUnlocked ? "group-hover:scale-110" : "blur-lg"
                       }`} 
@@ -291,10 +291,10 @@ export default function CyberDays() {
                 {/* Detalles de producto */}
                 <div className="p-6 flex-1 flex flex-col text-left">
                   <span className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">
-                    {product.brand} • {product.weight}
+                    {isUnlocked ? `${product.brand} • ${product.weight}` : "Abunga Especial"}
                   </span>
                   <h3 className="font-extrabold text-xl text-gray-900 group-hover:text-[#95b721] transition-colors mb-6">
-                    {product.name}
+                    {isUnlocked ? product.name : "Oferta Sorpresa 🎁"}
                   </h3>
 
                   {/* Precios */}
