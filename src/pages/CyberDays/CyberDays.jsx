@@ -159,15 +159,6 @@ export default function CyberDays() {
               className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-2xl border-4 border-white/40 hover:scale-105 transition-transform"
             />
           </Link>
-
-          {/* CyberDays Logo */}
-          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-6 py-2 rounded-2xl shadow-2xl border border-white/20">
-            <img 
-              src="/cyberdays-peru.jpg" 
-              alt="CyberDays Perú Logo" 
-              className="h-12 md:h-16 object-contain rounded-lg"
-            />
-          </div>
         </div>
 
         <Navbar />
