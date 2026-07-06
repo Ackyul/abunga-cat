@@ -625,6 +625,7 @@ export default function BannerGenerator({ products = [] }) {
                   />
                 </div>
               </div>
+            </div>
           </div>
 
           <hr className="border-gray-100" />
