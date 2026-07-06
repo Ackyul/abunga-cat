@@ -6,6 +6,7 @@ import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { slugify } from "../lib/slugify";
 
 function ProductCard({ product, showActions = false }) {
   const [selectedWeight, setSelectedWeight] = useState("50gr");
@@ -261,7 +262,7 @@ function ProductCard({ product, showActions = false }) {
   return (
     <>
       <div
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => navigate(`/catalogo/${slugify(product.name)}`)}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={{

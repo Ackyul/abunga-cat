@@ -6,20 +6,21 @@ import Footer from "../../components/footer";
 import useCartStore from "../../stores/useCartStore";
 import useAuthStore from "../../stores/useAuthStore";
 import { toast } from "sonner";
+import { slugify } from "../../lib/slugify";
 
 // Definición de los 5 productos especiales de CyberDays
-const CYBER_PRODUCTS = [
+export const CYBER_PRODUCTS = [
   {
     id: "cyber-1",
-    name: "Mix Deshidratado Fresa-Plátano Cyber",
+    name: "Combo 1",
     brand: "Abunga Especial",
-    originalPrice: 15.00,
-    price: 8.50,
-    discount: "43%",
+    originalPrice: 78.00,
+    price: 65.00,
+    discount: "17%",
     unlockDay: 6, // 6 de Julio
-    image: null, // El usuario pasará la imagen luego
-    weight: "100gr",
-    description: "Una mezcla crujiente y dulce cargada de energía natural, perfecta para tu día."
+    image: "/cyberdays-combo1.jpg",
+    weight: "Combo",
+    description: "1 Mix de 250 grs. S/ 36.00\n1 sobre de Macanela s/ 10.00\n1 sobre de naranjas deshidratadas s/ 10.00\n1 sobre de infusion (ritual a escoger) s/ 12.00\n1 sobre de láminas de frutas sabor a escoger s/ 10.00\nPrecio normal s/ 78.00\nPrecio cyber. S/ 65.00 soles"
   },
   {
     id: "cyber-2",
@@ -212,9 +213,14 @@ export default function CyberDays() {
             return (
               <div 
                 key={product.id}
+                onClick={() => {
+                  if (isUnlocked) {
+                    navigate(`/cyberdays/${slugify(product.name)}`);
+                  }
+                }}
                 className={`relative bg-white rounded-[2rem] border border-gray-100 shadow-xl overflow-hidden transition-all duration-300 group flex flex-col ${
                   isUnlocked 
-                    ? "hover:-translate-y-2 hover:shadow-2xl" 
+                    ? "hover:-translate-y-2 hover:shadow-2xl cursor-pointer" 
                     : "opacity-85"
                 }`}
               >
@@ -312,7 +318,10 @@ export default function CyberDays() {
                   {/* Botón de acción */}
                   <button
                     disabled={!isUnlocked}
-                    onClick={() => handleAddToCart(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(product);
+                    }}
                     className={`w-full flex items-center justify-center gap-2 font-black py-4 px-6 rounded-2xl shadow-lg transition-all duration-300 ${
                       isUnlocked 
                         ? "bg-[#95b721] hover:bg-[#e24052] text-white hover:scale-[1.02] active:scale-95 cursor-pointer" 
