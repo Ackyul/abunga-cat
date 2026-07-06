@@ -3,6 +3,7 @@ import { Navbar } from '../../components/navbar';
 import Footer from '../../components/footer';
 import { toast } from 'sonner';
 import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search } from 'lucide-react';
+import BannerGenerator from '../../components/banner-generator';
 
 export default function Admin() {
   const [authLoading, setAuthLoading] = useState(true);
@@ -476,6 +477,17 @@ export default function Admin() {
             <FileText className="h-4 w-4" />
             <span>Noticias y Novedades</span>
           </button>
+          <button
+            onClick={() => setActiveTab('banners')}
+            className={`py-4 px-6 font-extrabold text-sm uppercase tracking-wider flex items-center gap-2 border-b-4 transition-all ${
+              activeTab === 'banners'
+                ? 'border-[#95b721] text-[#95b721]'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <Camera className="h-4 w-4" />
+            <span>Generador de Fondos</span>
+          </button>
         </div>
       </div>
 
@@ -822,6 +834,9 @@ export default function Admin() {
               })}
             </div>
           </div>
+        ) : activeTab === 'banners' ? (
+          // TAB: BANNER GENERATOR
+          <BannerGenerator products={products} />
         ) : (
           // TAB: NEWS
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up">
