@@ -12,8 +12,10 @@ export default function BannerGenerator({ products = [] }) {
   
   const [title, setTitle] = useState("Snack Premium");
   const [subtitle, setSubtitle] = useState("Abunga - Snacks Naturales");
-  const [price, setPrice] = useState("S/ 10.00");
+  const [price, setPrice] = useState("S/ 8.00"); // Precio de oferta
+  const [originalPrice, setOriginalPrice] = useState("S/ 10.00"); // Precio anterior tachado
   const [badgeText, setBadgeText] = useState("100% NATURAL");
+  const [extraText, setExtraText] = useState(""); // Texto personalizado adicional
   
   // Custom uploaded image or product image url
   const [productImgUrl, setProductImgUrl] = useState("");
@@ -55,6 +57,18 @@ export default function BannerGenerator({ products = [] }) {
   const [badgeTextColor, setBadgeTextColor] = useState("#ffffff");
   const [badgeRotation, setBadgeRotation] = useState(-10); // En grados
   
+  // 5. PRECIO ANTERIOR TACHADO (PROMOCIÓN)
+  const [originalPriceSize, setOriginalPriceSize] = useState(50);
+  const [originalPriceXOffset, setOriginalPriceXOffset] = useState(0);
+  const [originalPriceYOffset, setOriginalPriceYOffset] = useState(0);
+  const [originalPriceColor, setOriginalPriceColor] = useState("#d1d5db");
+
+  // 6. TEXTO EXTRA PERSONALIZADO
+  const [extraTextSize, setExtraTextSize] = useState(36);
+  const [extraTextXOffset, setExtraTextXOffset] = useState(0);
+  const [extraTextYOffset, setExtraTextYOffset] = useState(0);
+  const [extraTextColor, setExtraTextColor] = useState("#ffffff");
+  
   // Estado para la pestaña de edición activa
   const [activeEditTab, setActiveEditTab] = useState("title");
 
@@ -69,14 +83,20 @@ export default function BannerGenerator({ products = [] }) {
       setTitleColor("#2c3e02"); // Verde oliva muy oscuro para buen contraste
       setSubtitleColor("#4d5f24"); 
       setPriceColor("#95b721"); // Verde corporativo
+      setOriginalPriceColor("#78716c"); // Gris piedra oscuro
+      setExtraTextColor("#1c1917"); // Casi negro
     } else if (bgStyle === "tropical") {
       setTitleColor("#ffffff");
       setSubtitleColor("#fef3c7"); // Crema
       setPriceColor("#ffffff");
+      setOriginalPriceColor("#fed7aa"); // Naranja muy claro
+      setExtraTextColor("#ffffff");
     } else { // "verde"
       setTitleColor("#ffffff");
       setSubtitleColor("#f3f4f6");
       setPriceColor(layout === "centrado" ? "#ffc700" : "#ffffff");
+      setOriginalPriceColor("#d1d5db"); // Gris claro
+      setExtraTextColor("#ffffff");
     }
   }, [bgStyle, layout]);
 
@@ -95,7 +115,12 @@ export default function BannerGenerator({ products = [] }) {
       if (prod) {
         setTitle(prod.name);
         setSubtitle(`${prod.brand || "Abunga"} - ${prod.tipo || "Snacks"}`);
-        setPrice(prod.precio ? `S/ ${Number(prod.precio).toFixed(2)}` : "S/ 10.00");
+        const formattedPrice = prod.precio ? `S/ ${Number(prod.precio).toFixed(2)}` : "S/ 10.00";
+        setOriginalPrice(formattedPrice);
+        // Sugerir un precio con 20% de descuento por defecto
+        const discVal = prod.precio ? Number(prod.precio) * 0.8 : 8.00;
+        setPrice(`S/ ${discVal.toFixed(2)}`);
+        
         if (prod.image) {
           setProductImgUrl(prod.image);
         } else {
@@ -129,13 +154,15 @@ export default function BannerGenerator({ products = [] }) {
     drawCanvas();
   }, [
     logoImage, productImage, layout, bgStyle, 
-    title, subtitle, price, badgeText, 
+    title, subtitle, price, originalPrice, badgeText, extraText,
     imgScale, imgXOffset, imgYOffset, 
     logoScale, logoXOffset, logoYOffset,
     titleSize, titleXOffset, titleYOffset, titleColor,
     subtitleSize, subtitleXOffset, subtitleYOffset, subtitleColor,
     priceSize, priceXOffset, priceYOffset, priceColor,
-    badgeSize, badgeXOffset, badgeYOffset, badgeColor, badgeTextColor, badgeRotation
+    badgeSize, badgeXOffset, badgeYOffset, badgeColor, badgeTextColor, badgeRotation,
+    originalPriceSize, originalPriceXOffset, originalPriceYOffset, originalPriceColor,
+    extraTextSize, extraTextXOffset, extraTextYOffset, extraTextColor
   ]);
 
   // Función principal de renderizado en Canvas (1080x1080 px para alta calidad)
@@ -345,7 +372,28 @@ export default function BannerGenerator({ products = [] }) {
       }
       ctx.fillText(line, titleX, startY);
 
-      // 3. Precio grande destacado
+      // 3. Precio anterior tachado (si existe)
+      if (originalPrice.trim()) {
+        ctx.save();
+        ctx.fillStyle = originalPriceColor;
+        ctx.font = `700 ${originalPriceSize}px sans-serif`;
+        const opX = 560 + originalPriceXOffset;
+        const opY = startY + 50 + originalPriceYOffset;
+        ctx.fillText(originalPrice, opX, opY);
+        
+        // Dibujar línea de tachado
+        const textWidth = ctx.measureText(originalPrice).width;
+        ctx.strokeStyle = originalPriceColor;
+        ctx.lineWidth = Math.max(2, originalPriceSize / 15);
+        ctx.beginPath();
+        const lineY = opY + originalPriceSize * 0.45;
+        ctx.moveTo(opX, lineY);
+        ctx.lineTo(opX + textWidth, lineY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4. Precio grande destacado
       const priceX = 560 + priceXOffset;
       const priceY = startY + 110 + priceYOffset;
       ctx.fillStyle = priceColor;
@@ -366,7 +414,29 @@ export default function BannerGenerator({ products = [] }) {
       ctx.textAlign = "center";
       ctx.fillText(subtitle, 540 + subtitleXOffset, 865 + subtitleYOffset);
 
-      // 3. Precio Centrado
+      // 3. Precio anterior tachado centrado (si existe)
+      if (originalPrice.trim()) {
+        ctx.save();
+        ctx.fillStyle = originalPriceColor;
+        ctx.font = `700 ${originalPriceSize}px sans-serif`;
+        ctx.textAlign = "center";
+        const opX = 540 + originalPriceXOffset;
+        const opY = 920 + originalPriceYOffset - 55;
+        ctx.fillText(originalPrice, opX, opY);
+        
+        // Dibujar línea de tachado centrada
+        const textWidth = ctx.measureText(originalPrice).width;
+        ctx.strokeStyle = originalPriceColor;
+        ctx.lineWidth = Math.max(2, originalPriceSize / 15);
+        ctx.beginPath();
+        const lineY = opY + originalPriceSize * 0.45;
+        ctx.moveTo(opX - textWidth / 2, lineY);
+        ctx.lineTo(opX + textWidth / 2, lineY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4. Precio Centrado
       ctx.fillStyle = priceColor;
       ctx.font = `900 ${priceSize}px sans-serif`;
       ctx.textAlign = "center";
@@ -413,7 +483,25 @@ export default function BannerGenerator({ products = [] }) {
       ctx.textBaseline = "middle";
       ctx.font = `900 ${badgeSize}px sans-serif`;
       ctx.fillText(badgeText.toUpperCase(), 0, 1);
+      ctx.restore();
+    }
 
+    // ── F. DIBUJAR TEXTO EXTRA / PERSONALIZADO ──
+    if (extraText.trim()) {
+      ctx.save();
+      ctx.fillStyle = extraTextColor;
+      ctx.font = `bold ${extraTextSize}px sans-serif`;
+      
+      let ex = 560 + extraTextXOffset;
+      let ey = 660 + extraTextYOffset;
+
+      if (layout === "centrado") {
+        ctx.textAlign = "center";
+        ex = 540 + extraTextXOffset;
+        ey = 1000 + extraTextYOffset;
+      }
+
+      ctx.fillText(extraText, ex, ey);
       ctx.restore();
     }
 
@@ -475,11 +563,21 @@ export default function BannerGenerator({ products = [] }) {
         setPriceXOffset(0);
         setPriceYOffset(0);
         break;
+      case "originalPrice":
+        setOriginalPriceSize(50);
+        setOriginalPriceXOffset(0);
+        setOriginalPriceYOffset(0);
+        break;
       case "badge":
         setBadgeSize(24);
         setBadgeXOffset(0);
         setBadgeYOffset(0);
         setBadgeRotation(-10);
+        break;
+      case "extraText":
+        setExtraTextSize(36);
+        setExtraTextXOffset(0);
+        setExtraTextYOffset(0);
         break;
       case "product":
         setImgScale(1.0);
@@ -518,10 +616,18 @@ export default function BannerGenerator({ products = [] }) {
     setPriceXOffset(0);
     setPriceYOffset(0);
 
+    setOriginalPriceSize(50);
+    setOriginalPriceXOffset(0);
+    setOriginalPriceYOffset(0);
+
     setBadgeSize(24);
     setBadgeXOffset(0);
     setBadgeYOffset(0);
     setBadgeRotation(-10);
+
+    setExtraTextSize(36);
+    setExtraTextXOffset(0);
+    setExtraTextYOffset(0);
 
     toast.success("Todos los ajustes de posición y tamaño han sido restablecidos");
   };
@@ -622,7 +728,7 @@ export default function BannerGenerator({ products = [] }) {
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <label className="text-xs font-bold text-gray-600 uppercase">Subtítulo / Marca</label>
               <input
                 type="text"
@@ -634,11 +740,22 @@ export default function BannerGenerator({ products = [] }) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-600 uppercase">Precio</label>
+              <label className="text-xs font-bold text-gray-600 uppercase">Precio de Oferta / Principal</label>
               <input
                 type="text"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
+                placeholder="Ej. S/ 8.00"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-600 uppercase">Precio Anterior / Normal (Tachado)</label>
+              <input
+                type="text"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
                 placeholder="Ej. S/ 10.00"
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
               />
@@ -652,6 +769,17 @@ export default function BannerGenerator({ products = [] }) {
                 onChange={(e) => setBadgeText(e.target.value)}
                 placeholder="Ej. 100% NATURAL o -20%"
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721] font-bold text-gray-700"
+              />
+            </div>
+
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-bold text-gray-600 uppercase">Texto Extra / Personalizado</label>
+              <input
+                type="text"
+                value={extraText}
+                onChange={(e) => setExtraText(e.target.value)}
+                placeholder="Ej. ¡LLEVA 3 POR S/ 20!"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721] font-medium"
               />
             </div>
           </div>
@@ -701,12 +829,14 @@ export default function BannerGenerator({ products = [] }) {
             </h4>
 
             {/* Selector de Pestañas */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 bg-gray-100 p-1 rounded-xl">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 bg-gray-100 p-1 rounded-xl">
               {[
                 { id: "title", label: "Título" },
                 { id: "subtitle", label: "Subtítulo" },
-                { id: "price", label: "Precio" },
+                { id: "price", label: "P. Oferta" },
+                { id: "originalPrice", label: "P. Tachado" },
                 { id: "badge", label: "Sello" },
+                { id: "extraText", label: "Txt Extra" },
                 { id: "product", label: "Producto" },
                 { id: "logo", label: "Logo" },
               ].map((tab) => {
@@ -716,7 +846,7 @@ export default function BannerGenerator({ products = [] }) {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveEditTab(tab.id)}
-                    className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer text-center ${
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer text-center truncate ${
                       active
                         ? "bg-white text-[#95b721] shadow-xs"
                         : "text-gray-500 hover:text-gray-700 hover:bg-white/40"
@@ -965,6 +1095,84 @@ export default function BannerGenerator({ products = [] }) {
                 </div>
               )}
 
+              {activeEditTab === "originalPrice" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Precio Tachado</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño del Texto</span>
+                      <span>{originalPriceSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="15"
+                      max="120"
+                      step="1"
+                      value={originalPriceSize}
+                      onChange={(e) => setOriginalPriceSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{originalPriceXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={originalPriceXOffset}
+                        onChange={(e) => setOriginalPriceXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{originalPriceYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={originalPriceYOffset}
+                        onChange={(e) => setOriginalPriceYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color del Texto</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={originalPriceColor}
+                        onChange={(e) => setOriginalPriceColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                      />
+                      <span className="text-xs font-bold text-gray-700">{originalPriceColor}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeEditTab === "badge" && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
@@ -1069,6 +1277,84 @@ export default function BannerGenerator({ products = [] }) {
                         />
                         <span className="text-xs font-bold text-gray-700">{badgeTextColor}</span>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeEditTab === "extraText" && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">Edición del Texto Extra</span>
+                    <button
+                      type="button"
+                      onClick={resetCurrentTab}
+                      className="text-[10px] text-gray-400 hover:text-[#e24052] font-bold transition-all cursor-pointer"
+                    >
+                      Restablecer Elemento
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                      <span>Tamaño de Letra</span>
+                      <span>{extraTextSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="100"
+                      step="1"
+                      value={extraTextSize}
+                      onChange={(e) => setExtraTextSize(parseInt(e.target.value))}
+                      className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento X</span>
+                        <span>{extraTextXOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={extraTextXOffset}
+                        onChange={(e) => setExtraTextXOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-1">
+                        <span>Desplazamiento Y</span>
+                        <span>{extraTextYOffset}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-500"
+                        max="500"
+                        step="5"
+                        value={extraTextYOffset}
+                        onChange={(e) => setExtraTextYOffset(parseInt(e.target.value))}
+                        className="w-full accent-[#95b721] h-1.5 bg-gray-200/70 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Color del Texto Extra</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={extraTextColor}
+                        onChange={(e) => setExtraTextColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg overflow-hidden cursor-pointer border border-gray-200"
+                      />
+                      <span className="text-xs font-bold text-gray-700">{extraTextColor}</span>
                     </div>
                   </div>
                 </div>
