@@ -8,6 +8,25 @@ import { Navbar } from "../../components/navbar";
 const Cart = () => {
     const { cart, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCartStore();
 
+    const handleMakeOrder = () => {
+        let message = "¡Hola Abunga! 🌟 Me gustaría realizar el siguiente pedido:\n\n";
+        cart.forEach((item) => {
+            const itemTotal = (item.price * item.quantity).toFixed(2);
+            message += `*• ${item.name} (${item.selectedWeight})*\n`;
+            if (item.brand) message += `  Marca: ${item.brand}\n`;
+            if (item.fruits && item.fruits.length > 0) {
+                message += `  Contiene: ${item.fruits.join(", ")}\n`;
+            }
+            message += `  Cantidad: ${item.quantity} x S/ ${item.price.toFixed(2)} = S/ ${itemTotal}\n\n`;
+        });
+        message += `*Total a pagar:* S/ ${getTotalPrice().toFixed(2)}\n\n`;
+        message += "Quedo atento a la confirmación de mi pedido. ¡Gracias!";
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/51973391928?text=${encodedMessage}`;
+        window.open(whatsappUrl, "_blank");
+    };
+
     if (cart.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -20,7 +39,7 @@ const Cart = () => {
                         />
                     </div>
                     <div className="bg-white px-8 py-3 md:px-12 rounded-2xl shadow-sm border-2 border-black/10 z-10 mx-4 hidden md:block">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Cotización</h1>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
                     </div>
                     <Navbar />
                     <div className="absolute bottom-0 left-0 right-0 flex flex-col">
@@ -32,7 +51,7 @@ const Cart = () => {
 
                 <div className="flex-1 flex flex-col items-center justify-center p-4">
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-2 border-dashed border-gray-300 text-center max-w-md w-full">
-                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Tu cotización está vacía</h2>
+                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Tu pedido está vacío</h2>
                         <p className="text-gray-500 mb-8 text-lg">Parece que aún no has añadido ninguna delicia natural.</p>
                         <Link to="/catalogo">
                             <Button className="w-full bg-[#95b721] hover:bg-[#84a31d] text-white font-bold py-4 text-xl rounded-full shadow-md">
@@ -58,7 +77,7 @@ const Cart = () => {
                 </div>
 
                 <div className="bg-white px-8 py-3 md:px-12 rounded-2xl shadow-sm border-2 border-black/10 z-10 mx-4 hidden md:block">
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Cotización</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
                 </div>
                 
                 <Navbar />
@@ -137,12 +156,18 @@ const Cart = () => {
                                 </div>
                             </div>
 
+                            <button
+                                onClick={handleMakeOrder}
+                                className="w-full mb-4 flex items-center justify-center gap-2 bg-[#95b721] hover:bg-[#e24052] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 text-lg"
+                            >
+                                Hacer Pedido
+                            </button>
 
                              <button
                                 onClick={clearCart}
                                 className="w-full text-red-500 font-bold py-2 text-sm hover:underline"
                             >
-                                Vaciar Cotización
+                                Vaciar Pedido
                             </button>
                         </div>
                     </div>

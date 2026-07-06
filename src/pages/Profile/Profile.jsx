@@ -197,7 +197,7 @@ const Profile = () => {
                       to="/cart"
                       className="w-full flex items-center justify-center gap-2 bg-[#95b721] hover:bg-[#e24052] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 group"
                     >
-                      <span>Ir a la Cotización</span>
+                      <span>Hacer Pedido</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </div>
