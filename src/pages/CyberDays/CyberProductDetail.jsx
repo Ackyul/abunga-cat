@@ -115,10 +115,12 @@ export default function CyberProductDetail() {
             />
           </Link>
 
-          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-8 py-4 rounded-2xl shadow-2xl border border-white/20">
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 uppercase leading-none">
-              Cyber<span className="text-[#e24052]">Days</span>
-            </h1>
+          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-6 py-2 rounded-2xl shadow-2xl border border-white/20">
+            <img 
+              src="/cyberdays-peru.jpg" 
+              alt="CyberDays Perú Logo" 
+              className="h-12 md:h-16 object-contain rounded-lg"
+            />
           </div>
         </div>
 

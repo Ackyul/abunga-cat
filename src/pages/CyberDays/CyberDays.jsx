@@ -161,10 +161,12 @@ export default function CyberDays() {
           </Link>
 
           {/* CyberDays Logo */}
-          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-8 py-4 rounded-2xl shadow-2xl border border-white/20">
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900 uppercase leading-none">
-              Cyber<span className="text-[#e24052]">Days</span>
-            </h1>
+          <div className="hidden xl:flex items-center justify-center bg-white/95 backdrop-blur-md px-6 py-2 rounded-2xl shadow-2xl border border-white/20">
+            <img 
+              src="/cyberdays-peru.jpg" 
+              alt="CyberDays Perú Logo" 
+              className="h-12 md:h-16 object-contain rounded-lg"
+            />
           </div>
         </div>
 
@@ -194,6 +196,17 @@ export default function CyberDays() {
 
       {/* ── CUERPO PRINCIPAL ── */}
       <main className="container mx-auto px-4 py-12 max-w-6xl grow">
+        {/* Banner Promocional CyberDays Peru */}
+        <div className="flex justify-center mb-10">
+          <div className="max-w-sm w-full bg-white rounded-3xl p-3 shadow-xl border border-gray-100/80 flex items-center justify-center hover:scale-[1.01] transition-transform duration-300">
+            <img 
+              src="/cyberdays-peru.jpg" 
+              alt="CyberDays Perú Banner" 
+              className="rounded-2xl max-h-64 object-contain" 
+            />
+          </div>
+        </div>
+
         {/* Banner descriptivo */}
         <div className="text-center mb-12 max-w-2xl mx-auto">
           <h2 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">
