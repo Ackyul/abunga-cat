@@ -232,7 +232,7 @@ export default function ProductDetail() {
     return product.precio;
   };
 
-  const displayPrice = getPrice();
+  const displayPrice = Number(getPrice());
 
   const nameLow2 = product.name?.toLowerCase() || "";
   const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
