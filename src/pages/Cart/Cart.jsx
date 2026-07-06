@@ -30,22 +30,24 @@ const Cart = () => {
     if (cart.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <header className="bg-[#95b721] pt-8 pb-12 md:pt-14 md:pb-16 flex flex-row justify-between px-4 md:justify-center items-center relative md:gap-4">
-                    <div className="relative md:absolute md:left-8 md:top-1/2 md:transform md:-translate-y-1/2 z-10 shrink-0">
-                        <img 
-                            src="/logo-abunga.png" 
-                            alt="Abunga Logo" 
-                            className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-lg"
-                        />
-                    </div>
-                    <div className="bg-white px-8 py-3 md:px-12 rounded-2xl shadow-sm border-2 border-black/10 z-10 mx-4 hidden md:block">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
+                <header className="bg-[#95b721] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
+                    <div className="flex items-center gap-4 z-10">
+                        <Link to="/" className="shrink-0 relative">
+                            <img 
+                                src="/logo-abunga.png" 
+                                alt="Abunga Logo" 
+                                className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-[3px] border-white/20 hover:scale-105 transition-transform"
+                            />
+                        </Link>
+                        <div className="bg-white px-8 py-3 rounded-2xl shadow-md hidden xl:block border-2 border-black/10">
+                            <h1 className="text-xl md:text-2xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
+                        </div>
                     </div>
                     <Navbar />
                     <div className="absolute bottom-0 left-0 right-0 flex flex-col">
-                        <div className="h-2 bg-[#e24052]"></div>
-                        <div className="h-2 bg-[#d08635]"></div>
-                        <div className="h-2 bg-[#e3c561]"></div>
+                        <div className="h-1.5 bg-[#e24052]"></div>
+                        <div className="h-1.5 bg-[#d08635]"></div>
+                        <div className="h-1.5 bg-[#e3c561]"></div>
                     </div>
                 </header>
 
@@ -67,25 +69,26 @@ const Cart = () => {
 
     return (
         <div className="min-h-screen bg-white flex flex-col">
-            <header className="bg-[#95b721] pt-8 pb-12 md:pt-16 md:pb-14 flex flex-row justify-between px-4 md:justify-center items-center relative md:gap-4">
-                <div className="relative md:absolute md:left-8 md:top-1/2 md:transform md:-translate-y-1/2 z-10 shrink-0">
-                    <img 
-                        src="/logo-abunga.png" 
-                        alt="Abunga Logo" 
-                        className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-lg"
-                    />
-                </div>
-
-                <div className="bg-white px-8 py-3 md:px-12 rounded-2xl shadow-sm border-2 border-black/10 z-10 mx-4 hidden md:block">
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
+            <header className="bg-[#95b721] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
+                <div className="flex items-center gap-4 z-10">
+                    <Link to="/" className="shrink-0 relative">
+                        <img 
+                            src="/logo-abunga.png" 
+                            alt="Abunga Logo" 
+                            className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-[3px] border-white/20 hover:scale-105 transition-transform"
+                        />
+                    </Link>
+                    <div className="bg-white px-8 py-3 rounded-2xl shadow-md hidden xl:block border-2 border-black/10">
+                        <h1 className="text-xl md:text-2xl font-bold tracking-wider text-black uppercase text-center">Tu Pedido</h1>
+                    </div>
                 </div>
                 
                 <Navbar />
                 
                 <div className="absolute bottom-0 left-0 right-0 flex flex-col">
-                    <div className="h-2 bg-[#e24052]"></div>
-                    <div className="h-2 bg-[#d08635]"></div>
-                    <div className="h-2 bg-[#e3c561]"></div>
+                    <div className="h-1.5 bg-[#e24052]"></div>
+                    <div className="h-1.5 bg-[#d08635]"></div>
+                    <div className="h-1.5 bg-[#e3c561]"></div>
                 </div>
             </header>
 

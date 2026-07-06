@@ -145,50 +145,49 @@ export default function CyberDays() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* ── HEADER ── */}
-      <header className="bg-gradient-to-br from-[#a20087] via-[#ff6b00] to-[#ffc700] pt-10 pb-16 md:pt-16 md:pb-24 flex flex-row justify-between px-6 md:justify-center items-center relative gap-4 overflow-hidden">
+      <header className="bg-gradient-to-br from-[#a20087] via-[#ff6b00] to-[#ffc700] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative gap-4 overflow-hidden shrink-0">
         {/* Decoraciones de fondo flotantes */}
         <div className="absolute top-10 left-10 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none animate-pulse"></div>
         <div className="absolute bottom-5 right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
 
-        <div className="relative md:absolute md:left-8 md:top-1/2 md:transform md:-translate-y-1/2 z-10 shrink-0">
-          <Link to="/">
+        <div className="flex items-center gap-4 z-10">
+          <Link to="/" className="shrink-0 relative">
             <img 
               src="/logo-abunga.png" 
               alt="Abunga Logo" 
-              className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-2xl border-4 border-white/40 hover:scale-105 transition-transform"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-2xl border-4 border-white/40 hover:scale-105 transition-transform"
             />
           </Link>
-        </div>
 
-        {/* CyberDays Logo CSS Reconstructed */}
-        <div className="flex flex-col items-center justify-center bg-white/95 backdrop-blur-md px-10 py-5 rounded-3xl shadow-2xl border border-white/20 z-10 mx-4 max-w-sm md:max-w-md">
-          <div className="flex items-center gap-2 mb-2">
-            {/* Círculo 1: Púrpura con Shopping Bag */}
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#a20087] rounded-full flex items-center justify-center text-white shadow-md transform -rotate-12">
-              <ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />
+          {/* CyberDays Logo CSS Reconstructed */}
+          <div className="hidden xl:flex flex-col items-center justify-center bg-white/95 backdrop-blur-md px-8 py-3 rounded-2xl shadow-2xl border border-white/20">
+            <div className="flex items-center gap-2 mb-1">
+              {/* Círculo 1: Púrpura con Shopping Bag */}
+              <div className="w-8 h-8 bg-[#a20087] rounded-full flex items-center justify-center text-white shadow-md transform -rotate-12">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
+              {/* Círculo 2: Amarillo con Cara Feliz */}
+              <div className="w-8 h-8 bg-[#ffc700] rounded-full flex items-center justify-center text-white shadow-md z-10">
+                <Smile className="w-4 h-4" />
+              </div>
+              {/* Círculo 3: Naranja con Porcentaje */}
+              <div className="w-8 h-8 bg-[#ff6b00] rounded-full flex items-center justify-center text-white shadow-md transform rotate-12">
+                <Percent className="w-4 h-4" />
+              </div>
             </div>
-            {/* Círculo 2: Amarillo con Cara Feliz */}
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#ffc700] rounded-full flex items-center justify-center text-white shadow-md z-10">
-              <Smile className="w-5 h-5 md:w-6 md:h-6" />
-            </div>
-            {/* Círculo 3: Naranja con Porcentaje */}
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#ff6b00] rounded-full flex items-center justify-center text-white shadow-md transform rotate-12">
-              <Percent className="w-5 h-5 md:w-6 md:h-6" />
-            </div>
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-gray-900 uppercase leading-none">
+              Cyber<span className="text-[#a20087]">Days</span><span className="text-gray-500 font-normal text-lg lowercase">.pe</span>
+            </h1>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 uppercase">
-            Cyber<span className="text-[#a20087]">Days</span><span className="text-gray-500 font-normal text-2xl lowercase">.pe</span>
-          </h1>
-          <p className="text-xs text-gray-600 font-bold uppercase tracking-widest mt-1">Ofertas Exclusivas Diarias</p>
         </div>
 
         <Navbar />
 
         {/* Rayas de separación estilo Abunga */}
         <div className="absolute bottom-0 left-0 right-0 flex flex-col">
-          <div className="h-2 bg-[#a20087]"></div>
-          <div className="h-2 bg-[#ff6b00]"></div>
-          <div className="h-2 bg-[#ffc700]"></div>
+          <div className="h-1.5 bg-[#a20087]"></div>
+          <div className="h-1.5 bg-[#ff6b00]"></div>
+          <div className="h-1.5 bg-[#ffc700]"></div>
         </div>
       </header>
 

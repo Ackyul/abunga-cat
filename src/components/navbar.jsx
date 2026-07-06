@@ -35,8 +35,8 @@ export function Navbar() {
 
   return (
     <>
-      {/* ── DESKTOP nav (md+) ── */}
-      <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 items-center gap-3 z-20 animate-fade-in">
+      {/* ── DESKTOP nav (xl+) ── */}
+      <div className="hidden xl:flex items-center gap-3 z-20 animate-fade-in">
         {navLinks.map((link) => {
           const isCyber = link.path === "/cyberdays";
           return (
@@ -95,8 +95,8 @@ export function Navbar() {
         </Link>
       </div>
 
-      {/* ── MOBILE Header Actions (md-) ── */}
-      <div className="md:hidden flex items-center gap-2 relative z-20 shrink-0">
+      {/* ── MOBILE Header Actions (xl-) ── */}
+      <div className="xl:hidden flex items-center gap-2 relative z-20 shrink-0">
         {/* Mobile Cart Button */}
         <Link
           to="/cart"
@@ -124,7 +124,7 @@ export function Navbar() {
       {/* ── MOBILE fullscreen menu overlay ── */}
       {menuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-50 flex flex-col"
+          className="xl:hidden fixed inset-0 z-50 flex flex-col"
           style={{ background: "linear-gradient(160deg, #8ca91f 0%, #9ec425 55%, #b8d832 100%)" }}
         >
           {/* Top bar inside overlay */}

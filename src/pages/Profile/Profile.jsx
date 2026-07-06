@@ -185,33 +185,30 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col justify-between">
-      <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] pt-8 pb-12 flex flex-row justify-between px-4 md:justify-center items-center relative md:gap-0 shadow-sm shrink-0">
-        <div className="relative md:absolute md:left-8 md:top-1/2 md:transform md:-translate-y-1/2 z-10 shrink-0">
-          <Link to="/">
+      <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
+        <div className="flex items-center gap-4 z-10">
+          <Link to="/" className="shrink-0 relative">
             <img 
               src="/logo-abunga.png" 
               alt="Abunga Logo" 
-              className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-xl border-[3px] border-white/20 transition-transform hover:scale-105"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-xl border-[3px] border-white/20 hover:scale-105 transition-transform"
             />
           </Link>
-        </div>
-        
-        <div className="z-10 hidden md:block">
-           <div className="bg-white px-12 py-5 rounded-3xl shadow-md">
-             <img 
-               src="/abunga-text.png" 
-               alt="Abunga" 
-               className="h-16 object-contain"
-             />
-           </div>
+          <div className="bg-white px-8 py-3 rounded-2xl shadow-md hidden xl:block">
+            <img 
+              src="/abunga-text.png" 
+              alt="Abunga" 
+              className="h-10 object-contain"
+            />
+          </div>
         </div>
         
         <Navbar />
 
         <div className="absolute bottom-0 left-0 right-0 flex flex-col">
-          <div className="h-2 bg-[#e24052]"></div>
-          <div className="h-2 bg-[#d08635]"></div>
-          <div className="h-2 bg-[#e3c561]"></div>
+          <div className="h-1.5 bg-[#e24052]"></div>
+          <div className="h-1.5 bg-[#d08635]"></div>
+          <div className="h-1.5 bg-[#e3c561]"></div>
         </div>
       </header>
       
