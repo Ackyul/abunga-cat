@@ -24,15 +24,15 @@ export const CYBER_PRODUCTS = [
   },
   {
     id: "cyber-2",
-    name: "Láminas Exóticas Tamarindo-Mango Cyber",
+    name: "Combo 2",
     brand: "Abunga Especial",
-    originalPrice: 18.00,
-    price: 9.90,
-    discount: "45%",
+    originalPrice: 42.00,
+    price: 34.00,
+    discount: "17%",
     unlockDay: 7, // 7 de Julio
-    image: null,
-    weight: "100gr",
-    description: "Sabor agridulce intenso. Una combinación tropical totalmente deshidratada y sin azúcar añadida."
+    image: "/cyberdays-combo2.jpg",
+    weight: "Combo",
+    description: "Mix de frutas de 100 grs. S/ 20.00\n1 sobre a escoger (platani o macanela o mango con rocoto) s/ 10.00\n1 sobre de citricos o infusion a escoger s/ 12.00\nPrecio normal s/ 42.00\nPrecio cyber s/ 34.00"
   },
   {
     id: "cyber-3",
