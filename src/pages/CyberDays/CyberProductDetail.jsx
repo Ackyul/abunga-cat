@@ -18,6 +18,38 @@ export default function CyberProductDetail() {
   // Find the product by slug
   const product = CYBER_PRODUCTS.find(p => slugify(p.name) === productSlug);
 
+  // Options State
+  const [selectedOptions, setSelectedOptions] = useState(() => {
+    const initial = {};
+    if (product && product.options) {
+      product.options.forEach(opt => {
+        initial[opt.key] = opt.values[0];
+      });
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    if (product && product.options) {
+      const initial = {};
+      product.options.forEach(opt => {
+        initial[opt.key] = opt.values[0];
+      });
+      setSelectedOptions(initial);
+    } else {
+      setSelectedOptions({});
+    }
+  }, [product]);
+
+  // Helper to get current unique ID for the product
+  const getCartItemId = () => {
+    if (product && product.options && Object.keys(selectedOptions).length > 0) {
+      const suffix = product.options.map(opt => `${opt.key}_${selectedOptions[opt.key] || opt.values[0]}`).join("-");
+      return `${product.id}-${suffix}`;
+    }
+    return product ? product.id : "";
+  };
+
   // Time simulation or real date logic
   const getSimulatedDate = () => {
     const params = new URLSearchParams(window.location.search);
@@ -69,8 +101,9 @@ export default function CyberProductDetail() {
     );
   }
 
+  const currentCartItemId = getCartItemId();
   const isUnlocked = checkUnlocked(product.unlockDay);
-  const inCart = cart.find(item => item.id === product.id);
+  const inCart = cart.find(item => item.id === currentCartItemId);
 
   const handleAddToCart = () => {
     if (!isUnlocked) return;
@@ -85,10 +118,25 @@ export default function CyberProductDetail() {
       return;
     }
 
+    let itemId = product.id;
+    let displayName = product.name;
+    
+    if (product.options && Object.keys(selectedOptions).length > 0) {
+      const suffix = product.options.map(opt => `${opt.key}_${selectedOptions[opt.key] || opt.values[0]}`).join("-");
+      itemId = `${product.id}-${suffix}`;
+      
+      const optionDetails = product.options.map(opt => {
+        const val = selectedOptions[opt.key] || opt.values[0];
+        const cleanOptName = opt.name.split(" ")[0].replace(/[()]/g, "");
+        return `${cleanOptName}: ${val}`;
+      }).join(", ");
+      displayName = `${product.name} (${optionDetails})`;
+    }
+
     addToCart(
       {
-        id: product.id,
-        name: product.name,
+        id: itemId,
+        name: displayName,
         image: product.image || "/logo-abunga.png",
         price: product.price,
         brand: product.brand
@@ -96,7 +144,7 @@ export default function CyberProductDetail() {
       1,
       product.weight
     );
-    toast.success(`${product.name} agregado al pedido.`);
+    toast.success(`${displayName} agregado al pedido.`);
   };
 
   return (
@@ -217,6 +265,39 @@ export default function CyberProductDetail() {
                   </span>
                 </div>
               </div>
+
+              {/* Opción(es) a seleccionar */}
+              {product.options && product.options.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Personaliza tu combo:</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    {product.options.map((opt) => (
+                      <div key={opt.key} className="flex flex-col gap-1.5 text-left">
+                        <label htmlFor={opt.key} className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          {opt.name}
+                        </label>
+                        <select
+                          id={opt.key}
+                          value={selectedOptions[opt.key] || opt.values[0]}
+                          onChange={(e) => {
+                            setSelectedOptions(prev => ({
+                              ...prev,
+                              [opt.key]: e.target.value
+                            }));
+                          }}
+                          className="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all cursor-pointer text-sm"
+                        >
+                          {opt.values.map((val) => (
+                            <option key={val} value={val}>
+                              {val}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Add to cart / Action button */}
               <div className="pt-2">

@@ -20,7 +20,19 @@ export const CYBER_PRODUCTS = [
     unlockDay: 6, // 6 de Julio
     image: "/cyberdays-combo1.jpg",
     weight: "Combo",
-    description: "1 Mix de 250 grs. S/ 36.00\n1 sobre de Macanela s/ 10.00\n1 sobre de naranjas deshidratadas s/ 10.00\n1 sobre de infusion (ritual a escoger) s/ 12.00\n1 sobre de láminas de frutas sabor a escoger s/ 10.00\nPrecio normal s/ 78.00\nPrecio cyber. S/ 65.00 soles"
+    description: "1 Mix de 250 grs. S/ 36.00\n1 sobre de Macanela s/ 10.00\n1 sobre de naranjas deshidratadas s/ 10.00\n1 sobre de infusion (ritual a escoger) s/ 12.00\n1 sobre de láminas de frutas sabor a escoger s/ 10.00\nPrecio normal s/ 78.00\nPrecio cyber. S/ 65.00 soles",
+    options: [
+      {
+        name: "Ritual (Infusión a escoger)",
+        key: "ritual",
+        values: ["Calma", "Defensa", "Digestión", "Energía"]
+      },
+      {
+        name: "Láminas de frutas sabor a escoger",
+        key: "laminas",
+        values: ["Acaí", "Cacao", "Coco", "Fresa", "Maracuyá", "Papaya", "Piña", "Sandía", "Tamarindo"]
+      }
+    ]
   },
   {
     id: "cyber-2",
@@ -32,19 +44,43 @@ export const CYBER_PRODUCTS = [
     unlockDay: 7, // 7 de Julio
     image: "/cyberdays-combo2.jpg",
     weight: "Combo",
-    description: "Mix de frutas de 100 grs. S/ 20.00\n1 sobre a escoger (platani o macanela o mango con rocoto) s/ 10.00\n1 sobre de citricos o infusion a escoger s/ 12.00\nPrecio normal s/ 42.00\nPrecio cyber s/ 34.00"
+    description: "Mix de frutas de 100 grs. S/ 20.00\n1 sobre a escoger (platani o macanela o mango con rocoto) s/ 10.00\n1 sobre de citricos o infusion a escoger s/ 12.00\nPrecio normal s/ 42.00\nPrecio cyber s/ 34.00",
+    options: [
+      {
+        name: "Sobre a escoger",
+        key: "sobre1",
+        values: ["Platani", "Macanela", "Mango con rocoto"]
+      },
+      {
+        name: "Cítricos o Infusión a escoger",
+        key: "sobre2",
+        values: ["Naranja deshidratada", "Infusión Calma", "Infusión Defensa", "Infusión Digestión", "Infusión Energía"]
+      }
+    ]
   },
   {
     id: "cyber-3",
-    name: "Ritual Defensa Antioxidante Cyber",
+    name: "Combo 3",
     brand: "Abunga Especial",
-    originalPrice: 12.00,
-    price: 7.90,
-    discount: "34%",
+    originalPrice: 30.00,
+    price: 25.00,
+    discount: "20%",
     unlockDay: 8, // 8 de Julio
-    image: null,
-    weight: "100gr",
-    description: "Infusión premium a base de fresa, arándanos deshidratados y hojas seleccionadas para tu inmunidad."
+    image: "/cyberdays-combo3.jpg",
+    weight: "Combo",
+    description: "Mix de frutas s/ 10.00\n1 sobre de láminas de frutas sabor a escoger s/ 10.00\n1 sobre a escoger macanela o citrico o mango con rocoto s/ 10.00\nPrecio normal s/ 30.00\nPrecio cyber..s/ 25.00",
+    options: [
+      {
+        name: "Láminas de frutas sabor a escoger",
+        key: "laminas",
+        values: ["Acaí", "Cacao", "Coco", "Fresa", "Maracuyá", "Papaya", "Piña", "Sandía", "Tamarindo"]
+      },
+      {
+        name: "Sobre a escoger",
+        key: "sobre_especial",
+        values: ["Macanela", "Cítrico", "Mango con rocoto"]
+      }
+    ]
   },
   {
     id: "cyber-4",
