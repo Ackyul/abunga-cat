@@ -84,27 +84,44 @@ export const CYBER_PRODUCTS = [
   },
   {
     id: "cyber-4",
-    name: "Piña Deshidratada Premium Cyber",
+    name: "Combo 4",
     brand: "Abunga Especial",
-    originalPrice: 16.00,
-    price: 8.90,
-    discount: "44%",
+    originalPrice: 30.00,
+    price: 20.00,
+    discount: "33%",
     unlockDay: 9, // 9 de Julio
-    image: null,
-    weight: "100gr",
-    description: "Rodajas de piña seleccionadas de la mejor calidad, dulces y con textura ideal."
+    image: "/cyberdays-combo4.jpg",
+    weight: "Combo",
+    description: "3x2 en laminas abunga",
+    options: [
+      {
+        name: "Lámina 1 (sabor a escoger)",
+        key: "lamina1",
+        values: ["Acaí", "Cacao", "Coco", "Fresa", "Maracuyá", "Papaya", "Piña", "Sandía", "Tamarindo"]
+      },
+      {
+        name: "Lámina 2 (sabor a escoger)",
+        key: "lamina2",
+        values: ["Acaí", "Cacao", "Coco", "Fresa", "Maracuyá", "Papaya", "Piña", "Sandía", "Tamarindo"]
+      },
+      {
+        name: "Lámina 3 (sabor a escoger)",
+        key: "lamina3",
+        values: ["Acaí", "Cacao", "Coco", "Fresa", "Maracuyá", "Papaya", "Piña", "Sandía", "Tamarindo"]
+      }
+    ]
   },
   {
     id: "cyber-5",
-    name: "Mega Pack Familiar Snacks Cyber",
+    name: "Combo 5",
     brand: "Abunga Especial",
-    originalPrice: 35.00,
-    price: 19.90,
-    discount: "43%",
+    originalPrice: 25.00,
+    price: 20.00,
+    discount: "20%",
     unlockDay: 10, // 10 de Julio
-    image: null,
-    weight: "Cyber-Pack",
-    description: "El combo definitivo con todos nuestros snacks más solicitados para compartir en casa."
+    image: "/cyberdays-combo5.jpg",
+    weight: "5 Sobres",
+    description: "Llévate el set de abunga loncheritas ( 5 ) sobres precio normal s/ 25.00 soles\nA s/ 20.00"
   }
 ];
 
