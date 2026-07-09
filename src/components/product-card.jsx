@@ -4,6 +4,7 @@ import { PRECIOS } from "../lib/constants";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
+import useProductStore from "../stores/useProductStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { slugify } from "../lib/slugify";
@@ -13,16 +14,21 @@ function ProductCard({ product, showActions = false }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
   const { user } = useAuthStore();
+  const { filters } = useProductStore();
   const navigate = useNavigate();
 
   if (!product) return null;
 
+  const hasActiveFilters = !!(filters && (filters.types.length > 0 || filters.fruits.length > 0));
+
   // Detecta rituales/infusiones por tipo "Infusión" o por nombre
   const isRitual =
-    product.tipo === "Infusión" ||
-    product.tipo === "Infusiones" ||
-    product.tipo?.toLowerCase().includes("infusion") ||
-    product.name?.toLowerCase().includes("ritual");
+    hasActiveFilters && (
+      product.tipo === "Infusión" ||
+      product.tipo === "Infusiones" ||
+      product.tipo?.toLowerCase().includes("infusion") ||
+      product.name?.toLowerCase().includes("ritual")
+    );
 
   // Color específico por ritual
   const getRitualTheme = () => {
@@ -76,7 +82,7 @@ function ProductCard({ product, showActions = false }) {
     }
   };
 
-  const isFruta = product.tipo === "Fruta" && !!getFrutaTheme();
+  const isFruta = hasActiveFilters && product.tipo === "Fruta" && !!getFrutaTheme();
   const frutaTheme = isFruta ? getFrutaTheme() : null;
 
   // Color específico por lámina
@@ -115,14 +121,14 @@ function ProductCard({ product, showActions = false }) {
     }
   };
 
-  const isLamina = product.tipo?.includes("L\u00e1minas") && !!getLaminaTheme();
+  const isLamina = hasActiveFilters && product.tipo?.includes("L\u00e1minas") && !!getLaminaTheme();
   const laminaTheme = isLamina ? getLaminaTheme() : null;
 
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
   // Custom color overrides from the database (admin-configurable)
-  const hasCustomBg = !!product.bg_color;
-  const hasCustomText = !!product.text_color;
+  const hasCustomBg = hasActiveFilters && !!product.bg_color;
+  const hasCustomText = hasActiveFilters && !!product.text_color;
   const customBg = hasCustomBg ? product.bg_color : null;
   const customText = hasCustomText ? product.text_color : null;
 
