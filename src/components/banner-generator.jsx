@@ -205,7 +205,7 @@ export default function BannerGenerator({ products = [] }) {
       ctx.fill();
 
     } else if (bgStyle === "tropical") {
-      // Degradado de CyberDays / Tropical (Naranja - Amarillo)
+      // Degradado de Tropical (Naranja - Amarillo)
       const gradient = ctx.createLinearGradient(0, 0, 1080, 1080);
       gradient.addColorStop(0, "#ff6b00");
       gradient.addColorStop(0.6, "#ff9e00");
@@ -214,7 +214,7 @@ export default function BannerGenerator({ products = [] }) {
       ctx.fillRect(0, 0, 1080, 1080);
 
       // Círculos abstractos gigantes decorativos
-      ctx.fillStyle = "rgba(162, 0, 135, 0.1)"; // Púrpura Cyber
+      ctx.fillStyle = "rgba(162, 0, 135, 0.1)"; // Púrpura decorativo
       ctx.beginPath();
       ctx.arc(100, 900, 300, 0, Math.PI * 2);
       ctx.fill();
@@ -801,7 +801,7 @@ export default function BannerGenerator({ products = [] }) {
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
               >
                 <option value="verde">Verde Abunga (Corporativo)</option>
-                <option value="tropical">Cyber / Tropical (Naranja/Oro)</option>
+                <option value="tropical">Tropical (Naranja/Oro)</option>
                 <option value="limpio">Limpio / Minimalista (Crema)</option>
               </select>
             </div>

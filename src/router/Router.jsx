@@ -6,8 +6,6 @@ import ProductDetail from "../pages/Catalogo/ProductDetail";
 import Cart from "../pages/Cart/Cart";
 import Admin from "../pages/Admin/Admin";
 import Profile from "../pages/Profile/Profile";
-import CyberDays from "../pages/CyberDays/CyberDays";
-import CyberProductDetail from "../pages/CyberDays/CyberProductDetail";
 
 function Router() {
   return (
@@ -20,8 +18,6 @@ function Router() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/cyberdays" element={<CyberDays />} />
-        <Route path="/cyberdays/:productSlug" element={<CyberProductDetail />} />
       </Routes>
     </BrowserRouter>
   );
