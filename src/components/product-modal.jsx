@@ -257,31 +257,33 @@ export function ProductModal({ product, isOpen, onClose }) {
                      >S/ {displayPrice}</p>
                 </div>
 
-                <div className="w-1/2 min-w-[150px]">
-                  {cartItem ? (
-                    <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
-                      <button 
-                        onClick={handleDecrease} 
-                        className="h-10 w-10 flex items-center justify-center bg-white rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-100 transition-colors border border-gray-100"
-                      >−</button>
-                      <span className="font-extrabold text-lg text-gray-800">{cartItem.quantity}</span>
-                      <button 
-                        onClick={handleIncrease} 
-                        className="h-10 w-10 flex items-center justify-center text-white rounded-xl shadow-sm font-bold hover:opacity-90 transition-opacity"
+                {user && (
+                  <div className="w-1/2 min-w-[150px]">
+                    {cartItem ? (
+                      <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
+                        <button 
+                          onClick={handleDecrease} 
+                          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-100 transition-colors border border-gray-100"
+                        >−</button>
+                        <span className="font-extrabold text-lg text-gray-800">{cartItem.quantity}</span>
+                        <button 
+                          onClick={handleIncrease} 
+                          className="h-10 w-10 flex items-center justify-center text-white rounded-xl shadow-sm font-bold hover:opacity-90 transition-opacity"
+                          style={{ background: getButtonBg() }}
+                        >+</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleAddToCart}
+                        className="w-full flex items-center justify-center gap-2 text-white font-extrabold py-3.5 rounded-2xl text-base transition-all shadow-md hover:shadow-lg transform active:scale-95 animate-fade-in"
                         style={{ background: getButtonBg() }}
-                      >+</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleAddToCart}
-                      className="w-full flex items-center justify-center gap-2 text-white font-extrabold py-3.5 rounded-2xl text-base transition-all shadow-md hover:shadow-lg transform active:scale-95 animate-fade-in"
-                      style={{ background: getButtonBg() }}
-                    >
-                      <span>＋</span>
-                      <span>Añadir al Carrito</span>
-                    </button>
-                  )}
-                </div>
+                      >
+                        <span>＋</span>
+                        <span>Añadir al Carrito</span>
+                      </button>
+                    )}
+                  </div>
+                )}
             </div>
         </div>
       </DialogContent>

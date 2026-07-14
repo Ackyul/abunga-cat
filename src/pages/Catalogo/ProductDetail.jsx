@@ -391,34 +391,36 @@ export default function ProductDetail() {
             </div>
 
             {/* Botón de compra / Controles de carrito */}
-            <div className="pt-2">
-              {cartItem ? (
-                <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-2 border border-gray-100 max-w-xs shadow-inner">
-                  <button 
-                    onClick={handleDecrease}
-                    className="h-11 w-11 flex items-center justify-center bg-white rounded-xl shadow-md font-black text-gray-600 hover:bg-gray-100 transition-all border border-gray-100 cursor-pointer active:scale-95 text-lg"
+            {user && (
+              <div className="pt-2">
+                {cartItem ? (
+                  <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-2 border border-gray-100 max-w-xs shadow-inner">
+                    <button 
+                      onClick={handleDecrease}
+                      className="h-11 w-11 flex items-center justify-center bg-white rounded-xl shadow-md font-black text-gray-600 hover:bg-gray-100 transition-all border border-gray-100 cursor-pointer active:scale-95 text-lg"
+                    >
+                      −
+                    </button>
+                    <span className="font-extrabold text-xl text-gray-800">{cartItem.quantity}</span>
+                    <button 
+                      onClick={handleIncrease}
+                      className="h-11 w-11 flex items-center justify-center bg-[#95b721] rounded-xl shadow-md font-black text-white hover:bg-[#84a31d] transition-all cursor-pointer active:scale-95 text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-full md:max-w-xs flex items-center justify-center gap-2 text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 text-base border-none outline-none"
+                    style={{ background: getButtonBg() }}
                   >
-                    −
+                    <ShoppingCart className="w-5 h-5" />
+                    <span>Añadir al Pedido</span>
                   </button>
-                  <span className="font-extrabold text-xl text-gray-800">{cartItem.quantity}</span>
-                  <button 
-                    onClick={handleIncrease}
-                    className="h-11 w-11 flex items-center justify-center bg-[#95b721] rounded-xl shadow-md font-black text-white hover:bg-[#84a31d] transition-all cursor-pointer active:scale-95 text-lg"
-                  >
-                    +
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleAddToCart}
-                  className="w-full md:max-w-xs flex items-center justify-center gap-2 text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 text-base border-none outline-none"
-                  style={{ background: getButtonBg() }}
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>Añadir al Pedido</span>
-                </button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Separador */}
             <div className="h-px bg-gray-100 w-full"></div>

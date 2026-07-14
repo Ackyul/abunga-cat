@@ -346,7 +346,7 @@ function ProductCard({ product, showActions = false }) {
           <div className="flex-1" />
 
           {/* Actions */}
-          {showActions && (
+          {showActions && user && (
             cartItem ? (
               <div
                 className="flex items-center justify-between bg-gray-50 rounded-xl p-1 border border-gray-100"

@@ -52,23 +52,25 @@ export function Navbar() {
         ))}
 
         {/* Desktop Cart */}
-        <Link
-          to="/cart"
-          aria-label="Ver carrito"
-          className={cn(
-            "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-            location.pathname === "/cart"
-              ? "bg-white/95 text-[#95b721] shadow-lg shadow-black/10 backdrop-blur-sm"
-              : "text-white/90 hover:text-white hover:bg-white/20 hover:shadow-sm"
-          )}
-        >
-          <ShoppingBag className="w-5 h-5" />
-          {itemsCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#e24052] text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center border-2 border-[#95b721] animate-bounce">
-              {itemsCount}
-            </span>
-          )}
-        </Link>
+        {user && (
+          <Link
+            to="/cart"
+            aria-label="Ver carrito"
+            className={cn(
+              "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
+              location.pathname === "/cart"
+                ? "bg-white/95 text-[#95b721] shadow-lg shadow-black/10 backdrop-blur-sm"
+                : "text-white/90 hover:text-white hover:bg-white/20 hover:shadow-sm"
+            )}
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {itemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#e24052] text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center border-2 border-[#95b721] animate-bounce">
+                {itemsCount}
+              </span>
+            )}
+          </Link>
+        )}
 
         {/* Desktop User profile */}
         <Link
@@ -90,18 +92,20 @@ export function Navbar() {
       {/* ── MOBILE Header Actions (xl-) ── */}
       <div className="xl:hidden flex items-center gap-2 relative z-20 shrink-0">
         {/* Mobile Cart Button */}
-        <Link
-          to="/cart"
-          aria-label="Ver carrito"
-          className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white hover:bg-white/35 transition-all shadow-sm"
-        >
-          <ShoppingBag className="w-5 h-5" />
-          {itemsCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#e24052] text-white text-[9px] font-black rounded-full h-5 w-5 flex items-center justify-center border border-[#95b721]">
-              {itemsCount}
-            </span>
-          )}
-        </Link>
+        {user && (
+          <Link
+            to="/cart"
+            aria-label="Ver carrito"
+            className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white hover:bg-white/35 transition-all shadow-sm"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {itemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#e24052] text-white text-[9px] font-black rounded-full h-5 w-5 flex items-center justify-center border border-[#95b721]">
+                {itemsCount}
+              </span>
+            )}
+          </Link>
+        )}
 
         {/* Mobile menu toggle */}
         <button

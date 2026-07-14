@@ -1,12 +1,30 @@
+import { useEffect } from "react";
 import Footer from "../../components/footer";
 import useCartStore from "../../stores/useCartStore";
-import { Link } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import useAuthStore from "../../stores/useAuthStore";
+import { Link, useNavigate } from "react-router-dom";
+import { Trash2, Loader2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Navbar } from "../../components/navbar";
 
 const Cart = () => {
     const { cart, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCartStore();
+    const navigate = useNavigate();
+    const { user, loading: authLoading } = useAuthStore();
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            navigate("/profile");
+        }
+    }, [user, authLoading, navigate]);
+
+    if (authLoading || !user) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-[#95b721]" />
+            </div>
+        );
+    }
 
     const handleMakeOrder = () => {
         let message = "¡Hola Abunga! 🌟 Me gustaría realizar el siguiente pedido:\n\n";
