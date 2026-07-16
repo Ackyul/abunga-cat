@@ -21,14 +21,14 @@ function ProductCard({ product, showActions = false }) {
 
   const hasActiveFilters = !!(filters && (filters.types.length > 0 || filters.fruits.length > 0));
 
+  const isRitualProduct =
+    product.tipo === "Infusión" ||
+    product.tipo === "Infusiones" ||
+    product.tipo?.toLowerCase().includes("infusion") ||
+    product.name?.toLowerCase().includes("ritual");
+
   // Detecta rituales/infusiones por tipo "Infusión" o por nombre
-  const isRitual =
-    hasActiveFilters && (
-      product.tipo === "Infusión" ||
-      product.tipo === "Infusiones" ||
-      product.tipo?.toLowerCase().includes("infusion") ||
-      product.name?.toLowerCase().includes("ritual")
-    );
+  const isRitual = hasActiveFilters && isRitualProduct;
 
   // Color específico por ritual
   const getRitualTheme = () => {
@@ -171,7 +171,7 @@ function ProductCard({ product, showActions = false }) {
   };
 
   const getPrice = () => {
-    if (isRitual) return product.precio || 10;
+    if (isRitualProduct) return product.precio || 10;
     const nameLow = product.name?.toLowerCase() || "";
     // Manzana con Canela y Naranja: precio fijo
     if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
