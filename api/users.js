@@ -472,6 +472,154 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Tu contraseña ha sido restablecida con éxito.' });
     }
 
+    // ─── 6b. GET /api/users/google -> Redirección a Google OAuth
+    if (action === 'google' && req.method === 'GET') {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+
+      // Si no hay clientId y es desarrollo local, redirigimos directamente a callback con mock parameters
+      if (!clientId && isLocalhost) {
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+        const mockCallbackUrl = `${protocol}://${forwardedHost}/api/users/callback?code=mock_code&state=mock_state`;
+        
+        const secureFlag = isLocalhost ? '' : 'Secure;';
+        res.setHeader('Set-Cookie', `oauth_state=mock_state; Path=/api/users/callback; HttpOnly; ${secureFlag} SameSite=Lax; Max-Age=600`);
+        
+        res.writeHead(302, { Location: mockCallbackUrl });
+        return res.end();
+      }
+
+      if (!clientId) {
+        return res.status(500).json({ error: 'Servicio OAuth no disponible (Falta GOOGLE_CLIENT_ID).' });
+      }
+
+      // Generar un state token anti-CSRF para el flujo OAuth
+      const stateToken = crypto.randomBytes(32).toString('hex');
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+      const redirectUri = encodeURIComponent(`${protocol}://${forwardedHost}/api/users/callback`);
+
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=${stateToken}`;
+      
+      // Guardar state en cookie temporal para validar en callback
+      const secureFlag = isLocalhost ? '' : 'Secure;';
+      res.setHeader('Set-Cookie', `oauth_state=${stateToken}; Path=/api/users/callback; HttpOnly; ${secureFlag} SameSite=Lax; Max-Age=600`);
+      
+      res.writeHead(302, { Location: googleAuthUrl });
+      return res.end();
+    }
+
+    // ─── 6c. GET /api/users/callback -> Callback de Google OAuth
+    if (action === 'callback' && req.method === 'GET') {
+      const { code, state } = req.query || {};
+      if (!code) {
+        return res.status(400).json({ error: 'Código de autorización faltante.' });
+      }
+
+      // Validar state token anti-CSRF
+      const cookieHeader = req.headers.cookie || '';
+      const storedState = cookieHeader
+        .split(';')
+        .find(c => c.trim().startsWith('oauth_state='))
+        ?.split('=')[1];
+
+      if (!state || !storedState || state !== storedState) {
+        console.warn('⚠️ OAuth state mismatch - posible CSRF detectado');
+        return res.status(403).json({ error: 'Validación de seguridad fallida. Intenta de nuevo.' });
+      }
+
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+      // Limpiar la cookie de state
+      const secureFlag = isLocalhost ? '' : 'Secure;';
+      res.setHeader('Set-Cookie', `oauth_state=; Path=/api/users/callback; HttpOnly; ${secureFlag} SameSite=Lax; Max-Age=0`);
+
+      let userName = '';
+      let userEmail = '';
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+      // Si no hay el mock_code local
+      if (code === 'mock_code' && isLocalhost && (!clientId || !clientSecret)) {
+        userName = 'Usuario Google Test';
+        userEmail = 'test-google@example.com';
+      } else {
+        if (!clientId || !clientSecret) {
+          return res.status(500).json({ error: 'Configuración OAuth incompleta en el servidor.' });
+        }
+
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+        const redirectUri = `${protocol}://${forwardedHost}/api/users/callback`;
+
+        try {
+          // Intercambiar código por token de acceso
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: redirectUri,
+              grant_type: 'authorization_code',
+            })
+          });
+
+          const tokenData = await tokenResponse.json();
+          if (!tokenData.access_token) {
+            return res.status(401).json({ error: 'Fallo en la autenticación de Google.' });
+          }
+
+          // Obtener los datos del usuario de Google
+          const userResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+          });
+          const userData = await userResponse.json();
+
+          userEmail = userData.email;
+          userName = userData.name || userData.given_name || 'Usuario de Google';
+          if (!userEmail) {
+            return res.status(400).json({ error: 'No se pudo obtener el correo de Google.' });
+          }
+        } catch (err) {
+          console.error('Error al verificar OAuth con Google:', err);
+          return res.status(500).json({ error: 'Error de red durante la autenticación de Google.' });
+        }
+      }
+
+      // Buscar si el usuario ya existe en la DB
+      try {
+        const cleanEmail = userEmail.toLowerCase();
+        let users = await sql`SELECT id, name, email, cart, created_at FROM usuarios WHERE email = ${cleanEmail}`;
+        let user;
+
+        if (users.length === 0) {
+          // Si no existe, registrar el usuario nuevo con contraseña mock inútil
+          const cleanName = sanitizeString(userName).substring(0, 50);
+          const dummyPassword = hashPassword('oauth-google-' + crypto.randomBytes(16).toString('hex'));
+          
+          const insertResult = await sql`
+            INSERT INTO usuarios (name, email, password_hash, cart)
+            VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, '[]'::jsonb)
+            RETURNING id, name, email, cart, created_at
+          `;
+          user = insertResult[0];
+        } else {
+          user = users[0];
+        }
+
+        // Establecer la cookie de sesión y redirigir
+        setSessionCookie(user);
+        res.writeHead(302, { Location: '/profile' });
+        return res.end();
+      } catch (err) {
+        console.error('Error de base de datos en Google Callback:', err);
+        return res.status(500).json({ error: 'Error al iniciar sesión en la base de datos.' });
+      }
+    }
+
     // ─── 7. Operaciones que requieren sesión activa ──────────────
     const session = verifyUserSession(req);
     if (!session) {

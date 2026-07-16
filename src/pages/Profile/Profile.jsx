@@ -58,6 +58,10 @@ const Profile = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = "/api/users/google";
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -622,6 +626,21 @@ const Profile = () => {
                     className="w-full bg-linear-to-r mt-4 from-[#9ec425] to-[#8ca91f] text-white font-bold py-4 rounded-2xl hover:from-[#e24052] hover:to-[#cd384e] transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(149,183,33,0.5)] transform hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{isLogin ? "Ingresar a mi cuenta" : "Crear mi cuenta"}</span>
+                  </button>
+
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase">o ingresa con</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="w-full flex items-center justify-center gap-3 border-2 border-gray-200 hover:border-[#8ca91f] text-gray-700 font-bold py-3.5 rounded-2xl transition-all duration-300 hover:bg-gray-50 transform hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="h-5 w-5" />
+                    <span>{isLogin ? "Iniciar sesión con Google" : "Registrarse con Google"}</span>
                   </button>
                 </form>
 
