@@ -139,7 +139,8 @@ const useAuthStore = create((set, get) => ({
         (item) => item.id === localItem.id && item.selectedWeight === localItem.selectedWeight
       );
       if (idx > -1) {
-        merged[idx].quantity += localItem.quantity;
+        // Evitamos duplicar cantidades al recargar o redireccionar; tomamos el valor máximo
+        merged[idx].quantity = Math.max(merged[idx].quantity, localItem.quantity);
       } else {
         merged.push(localItem);
       }
