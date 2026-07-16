@@ -55,3 +55,6 @@ temp/
 .eslintcache
 
 .vercel
+
+# Google OAuth secrets
+client_secret_*.json

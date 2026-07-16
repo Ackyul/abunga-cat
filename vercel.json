@@ -1,16 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/auth/:action*",
-      "destination": "/api/auth"
-    },
-    {
-      "source": "/api/users/:action*",
-      "destination": "/api/users"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://abunga-backend.b4a.run/api/:path*"
     },
     {
       "source": "/(.*)",
