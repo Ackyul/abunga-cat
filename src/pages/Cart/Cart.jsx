@@ -27,7 +27,9 @@ const Cart = () => {
     }
 
     const handleMakeOrder = () => {
-        let message = "¡Hola Abunga! 🌟 Me gustaría realizar el siguiente pedido:\n\n";
+        const userName = user?.name || "";
+        const namePart = userName ? ` Soy ${userName}.` : "";
+        let message = `¡Hola Abunga! 🌟${namePart} Me gustaría realizar el siguiente pedido:\n\n`;
         cart.forEach((item) => {
             const itemTotal = (item.price * item.quantity).toFixed(2);
             message += `*• ${item.name} (${item.selectedWeight})*\n`;
@@ -42,7 +44,10 @@ const Cart = () => {
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/51973391928?text=${encodedMessage}`;
-        window.open(whatsappUrl, "_blank");
+        const newWindow = window.open(whatsappUrl, "_blank");
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+            window.location.href = whatsappUrl;
+        }
     };
 
     if (cart.length === 0) {

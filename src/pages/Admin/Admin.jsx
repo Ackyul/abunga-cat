@@ -5,6 +5,50 @@ import { toast } from 'sonner';
 import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search } from 'lucide-react';
 import BannerGenerator from '../../components/banner-generator';
 
+const getProductImage = (product) => {
+  if (!product) return '';
+  const originalImage = product.image;
+  
+  // Conservar imágenes externas de Cloudinary u otras URLs válidas
+  const hasExternalImage = originalImage && (
+    originalImage.startsWith('http://') || 
+    originalImage.startsWith('https://') || 
+    originalImage.startsWith('/assets/') ||
+    (originalImage.startsWith('/') && !originalImage.includes('img '))
+  );
+  
+  if (hasExternalImage) return originalImage;
+
+  const fruta = product.fruta === "Asaí" ? "Acaí" : product.fruta;
+  if (product.tipo === "Fruta") {
+    if (fruta === "Piña") return "/f-pina.png";
+    if (fruta === "Mango") return "/f-mango.png";
+    if (fruta === "Naranja") return "/f-naranja.png";
+    if (fruta === "Manzana" && product.name?.toLowerCase().includes("canela")) return "/f-manzana-canela.png";
+    if (fruta === "Manzana") return "/f-manzana.png";
+    if (fruta === "Fresa") return "/f-fresa.png";
+    if (fruta === "Papaya") return "/f-papaya.png";
+    if (fruta === "Plátano") return "/f-platano.png";
+  } else if (product.tipo?.includes("Láminas")) {
+    if (fruta === "Acaí" || product.name?.toLowerCase().includes("acai")) return "/r-acai.png";
+    if (fruta === "Maracuyá") return "/r-maracuya.png";
+    if (fruta === "Cacao") return "/r-cacao.png";
+    if (fruta === "Coco") return "/r-coco.png";
+    if (fruta === "Fresa") return "/r-fresa.png";
+    if (fruta === "Sandía") return "/r-sandia.png";
+    if (fruta === "Tamarindo") return "/r-tamarindo.png";
+    if (fruta === "Papaya") return "/r-papaya.png";
+    if (fruta === "Piña") return "/r-pina.png";
+  } else if (product.tipo === "Infusión" || product.tipo?.toLowerCase().includes("infusion")) {
+    const nameLow = product.name?.toLowerCase() || "";
+    if (nameLow.includes("calma")) return "/i-calma.png";
+    if (nameLow.includes("energ")) return "/i-energia.png";
+    if (nameLow.includes("defensa")) return "/i-defensa.png";
+    if (nameLow.includes("digesti")) return "/i-digestion.png";
+  }
+  return originalImage || '';
+};
+
 export default function Admin() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -699,8 +743,8 @@ export default function Admin() {
                     >
                       {isUploading ? (
                         <Loader2 className="h-8 w-8 text-[#95b721] animate-spin" />
-                      ) : product.image ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
+                      ) : getProductImage(product) ? (
+                        <img src={getProductImage(product)} alt={product.name} className="w-full h-full object-contain p-1" />
                       ) : (
                         <Globe className="h-10 w-10 text-gray-300 group-hover:text-[#95b721] transition-colors" />
                       )}

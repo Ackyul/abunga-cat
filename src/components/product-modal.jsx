@@ -96,12 +96,7 @@ export function ProductModal({ product, isOpen, onClose }) {
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
   const getPrice = () => {
-    if (isRitual) return product.precio || 10;
-    const nameLow = product.name?.toLowerCase() || "";
-    // Manzana con Canela y Naranja: precio fijo
-    if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
-    
-    // Obtener mapa de precios desde la base de datos (Neon Postgres) si existe
+    // 1. Intentar obtener el precio específico por peso desde los precios de la DB
     let preciosMap = product.precios;
     if (typeof preciosMap === 'string') {
       try {
@@ -111,17 +106,17 @@ export function ProductModal({ product, isOpen, onClose }) {
       }
     }
     
-    if (preciosMap && typeof preciosMap === 'object' && preciosMap[selectedWeight] !== undefined) {
-      return preciosMap[selectedWeight];
+    if (preciosMap && typeof preciosMap === 'object' && preciosMap[selectedWeight] !== undefined && preciosMap[selectedWeight] !== null && preciosMap[selectedWeight] !== '') {
+      return Number(preciosMap[selectedWeight]);
     }
     
-    if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
-       return PRECIOS[product.fruta][selectedWeight] || product.precio;
+    // 2. Si no hay mapa de precios por peso o no está definido el peso actual, usar el precio base de la DB
+    if (product.precio !== undefined && product.precio !== null && product.precio !== '') {
+      return Number(product.precio);
     }
-    if (product.tipo.includes("Láminas")) {
-        return product.precio || 10;
-    }
-    return product.precio;
+
+    // 3. Fallback final
+    return 10;
   };
 
   const displayPrice = getPrice();
