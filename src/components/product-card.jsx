@@ -171,7 +171,7 @@ function ProductCard({ product, showActions = false }) {
   };
 
   const getPrice = () => {
-    if (isRitual) return 10;
+    if (isRitual) return product.precio || 10;
     const nameLow = product.name?.toLowerCase() || "";
     // Manzana con Canela y Naranja: precio fijo
     if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
@@ -181,7 +181,9 @@ function ProductCard({ product, showActions = false }) {
     if (typeof preciosMap === 'string') {
       try {
         preciosMap = JSON.parse(preciosMap);
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     }
     
     if (preciosMap && typeof preciosMap === 'object' && preciosMap[selectedWeight] !== undefined) {
@@ -191,7 +193,7 @@ function ProductCard({ product, showActions = false }) {
     if ((product.tipo === "Fruta" || product.tipo === "Mix") && product.fruta && PRECIOS[product.fruta]) {
       return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }
-    if (product.tipo.includes("Láminas")) return 10;
+    if (product.tipo.includes("Láminas")) return product.precio || 10;
     return product.precio;
   };
 

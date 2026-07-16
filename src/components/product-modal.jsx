@@ -96,7 +96,7 @@ export function ProductModal({ product, isOpen, onClose }) {
   const ritualTheme = isRitual ? getRitualTheme() : null;
 
   const getPrice = () => {
-    if (isRitual) return 10;
+    if (isRitual) return product.precio || 10;
     const nameLow = product.name?.toLowerCase() || "";
     // Manzana con Canela y Naranja: precio fijo
     if (nameLow.includes("canela") || product.fruta === "Naranja") return product.precio || 10;
@@ -106,7 +106,9 @@ export function ProductModal({ product, isOpen, onClose }) {
     if (typeof preciosMap === 'string') {
       try {
         preciosMap = JSON.parse(preciosMap);
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     }
     
     if (preciosMap && typeof preciosMap === 'object' && preciosMap[selectedWeight] !== undefined) {
@@ -117,7 +119,7 @@ export function ProductModal({ product, isOpen, onClose }) {
        return PRECIOS[product.fruta][selectedWeight] || product.precio;
     }
     if (product.tipo.includes("Láminas")) {
-        return 10;
+        return product.precio || 10;
     }
     return product.precio;
   };
