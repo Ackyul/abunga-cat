@@ -44,8 +44,14 @@ const Cart = () => {
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/51973391928?text=${encodedMessage}`;
-        const newWindow = window.open(whatsappUrl, "_blank");
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+        
+        try {
+            const newWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+                window.location.href = whatsappUrl;
+            }
+        } catch (e) {
+            console.error("Popup blocked or failed, using redirect fallback:", e);
             window.location.href = whatsappUrl;
         }
     };
