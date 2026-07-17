@@ -701,7 +701,7 @@ app.post('/api/users/reset-password', async (req, res) => {
 
 // GET /api/users/google -> Redirección a Google OAuth (Cliente)
 app.get('/api/users/google', (req, res) => {
-  const { connect } = req.query || {};
+  const { connect, returnTo } = req.query || {};
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const isLocalhost = req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1');
 
@@ -720,6 +720,17 @@ app.get('/api/users/google', (req, res) => {
   }
 
   const stateToken = connectUserId ? `connect:${connectUserId}:${crypto.randomBytes(16).toString('hex')}` : crypto.randomBytes(32).toString('hex');
+
+  // Guardar la URL de retorno en una cookie si existe
+  if (returnTo) {
+    res.cookie('oauth_return_to', returnTo, {
+      path: '/api/users/callback',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 600 * 1000
+    });
+  }
 
   // Si no hay clientId en local dev, redirige inmediatamente con mock parameters para facilitar desarrollo local
   if (!clientId && isLocalhost) {
@@ -865,7 +876,16 @@ app.get('/api/users/callback', async (req, res) => {
     const token = signToken({ id: user.id, email: user.email, iat: Date.now(), exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }, jwtSecret);
     setCookie(res, 'user_token', token, 2592000);
     
-    res.redirect(`${getBaseUrl(req)}/profile`);
+    // Leer y limpiar cookie de retorno
+    let returnTo = req.cookies.oauth_return_to || '/profile';
+    res.clearCookie('oauth_return_to', { path: '/api/users/callback' });
+
+    // Evitar vulnerabilidad de redirección abierta
+    if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+      returnTo = '/profile';
+    }
+
+    res.redirect(`${getBaseUrl(req)}${returnTo}`);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error al iniciar sesión en la base de datos.' });

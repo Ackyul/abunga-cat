@@ -27,7 +27,8 @@ const Login = () => {
   // Redireccionar si ya está logueado
   useEffect(() => {
     if (user && !loading) {
-      navigate("/profile");
+      const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+      navigate(returnTo);
     }
   }, [user, loading, navigate]);
 
@@ -41,14 +42,16 @@ const Login = () => {
     try {
       await login(emailInput, passwordInput);
       toast.success("¡Sesión iniciada con éxito! Bienvenido de nuevo.");
-      navigate("/profile");
+      const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+      navigate(returnTo);
     } catch (err) {
       toast.error(err.message || "Credenciales incorrectas.");
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "/api/users/google";
+    const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+    window.location.href = `/api/users/google?returnTo=${encodeURIComponent(returnTo)}`;
   };
 
   const handleForgotPasswordRequest = async (e) => {

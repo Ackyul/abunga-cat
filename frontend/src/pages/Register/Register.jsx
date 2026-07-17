@@ -18,7 +18,8 @@ const Register = () => {
   // Redireccionar si ya está logueado
   useEffect(() => {
     if (user && !loading) {
-      navigate("/profile");
+      const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+      navigate(returnTo);
     }
   }, [user, loading, navigate]);
 
@@ -32,14 +33,16 @@ const Register = () => {
     try {
       await register(nameInput, emailInput, passwordInput, phoneInput || null);
       toast.success("¡Cuenta creada con éxito! Bienvenido a Abunga.");
-      navigate("/profile");
+      const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+      navigate(returnTo);
     } catch (err) {
       toast.error(err.message || "Error al registrarse. Intenta de nuevo.");
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "/api/users/google";
+    const returnTo = sessionStorage.getItem("last_visited_page") || "/profile";
+    window.location.href = `/api/users/google?returnTo=${encodeURIComponent(returnTo)}`;
   };
 
   return (
