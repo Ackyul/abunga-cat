@@ -44,13 +44,13 @@ const useAuthStore = create((set, get) => ({
   },
 
   // Registro de usuario
-  register: async (name, email, password) => {
+  register: async (name, email, password, phone) => {
     set({ loading: true, error: null });
     try {
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, phone }),
       });
 
       const data = await response.json();
@@ -61,8 +61,6 @@ const useAuthStore = create((set, get) => ({
       useCartStore.getState().setIsLoggedIn(true);
       set({ user: data.user, loading: false });
 
-      // Si el nuevo usuario se registra y tiene productos en el carrito local,
-      // sincronizamos ese carrito con su cuenta nueva en la base de datos
       const localCart = useCartStore.getState().cart;
       if (localCart.length > 0) {
         await get().syncCartWithDb(localCart);
@@ -92,18 +90,58 @@ const useAuthStore = create((set, get) => ({
       useCartStore.getState().setIsLoggedIn(true);
       set({ user: data.user, loading: false });
 
-      // Fusionar carrito local con el carrito de la base de datos
       const localCart = useCartStore.getState().cart;
       const dbCart = data.user.cart || [];
       const mergedCart = get().mergeCarts(localCart, dbCart);
       
-      // Actualizar el estado del carrito local
       useCartStore.setState({ cart: mergedCart });
-      
-      // Sincronizar el carrito fusionado final con la base de datos
       await get().syncCartWithDb(mergedCart);
       
       return data;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
+  },
+
+  // Actualizar datos del perfil
+  updateProfile: async (name, phone) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch('/api/users/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al actualizar perfil');
+      }
+
+      set({ user: data.user, loading: false });
+      return data.user;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
+  },
+
+  // Desvincular Google
+  disconnectGoogle: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch('/api/users/disconnect-google', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al desvincular Google');
+      }
+
+      set({ user: data.user, loading: false });
+      return data.user;
     } catch (err) {
       set({ error: err.message, loading: false });
       throw err;

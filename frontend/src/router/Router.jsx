@@ -6,6 +6,8 @@ import ProductDetail from "../pages/Catalogo/ProductDetail";
 import Cart from "../pages/Cart/Cart";
 import Admin from "../pages/Admin/Admin";
 import Profile from "../pages/Profile/Profile";
+import Login from "../pages/Login/Login";
+import Register from "../pages/Register/Register";
 
 function Router() {
   return (
@@ -18,6 +20,8 @@ function Router() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </BrowserRouter>
   );

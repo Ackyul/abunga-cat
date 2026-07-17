@@ -412,13 +412,14 @@ app.post('/api/users/register', async (req, res) => {
     return res.status(429).json({ error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' });
   }
 
-  const { name, email, password } = req.body || {};
+  const { name, email, password, phone } = req.body || {};
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos.' });
   }
 
   const cleanName = sanitizeString(name);
   const cleanEmail = sanitizeString(email).toLowerCase();
+  const cleanPhone = phone ? sanitizeString(phone) : null;
 
   if (cleanName.length < 2 || cleanName.length > MAX_NAME_LENGTH) {
     return res.status(400).json({ error: `El nombre debe tener entre 2 y ${MAX_NAME_LENGTH} caracteres.` });
@@ -438,9 +439,9 @@ app.post('/api/users/register', async (req, res) => {
 
     const passwordHash = hashPassword(password);
     const result = await sql`
-      INSERT INTO usuarios (name, email, password_hash, cart)
-      VALUES (${cleanName}, ${cleanEmail}, ${passwordHash}, '[]'::jsonb)
-      RETURNING id, name, email, cart, created_at
+      INSERT INTO usuarios (name, email, password_hash, phone, cart)
+      VALUES (${cleanName}, ${cleanEmail}, ${passwordHash}, ${cleanPhone}, '[]'::jsonb)
+      RETURNING id, name, email, phone, google_email, cart, created_at
     `;
     
     const user = result[0];
@@ -508,7 +509,7 @@ app.get('/api/users/session', async (req, res) => {
     const session = verifyToken(token, jwtSecret);
     if (session && session.id) {
       try {
-        const users = await sql`SELECT id, name, email, cart, created_at FROM usuarios WHERE id = ${session.id}`;
+        const users = await sql`SELECT id, name, email, phone, google_email, cart, created_at FROM usuarios WHERE id = ${session.id}`;
         if (users.length > 0) {
           return res.status(200).json({ authenticated: true, user: users[0] });
         }
@@ -633,16 +634,33 @@ app.post('/api/users/reset-password', async (req, res) => {
 
 // GET /api/users/google -> Redirección a Google OAuth (Cliente)
 app.get('/api/users/google', (req, res) => {
+  const { connect } = req.query || {};
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const isLocalhost = req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1');
+
+  let connectUserId = null;
+  if (connect === 'true') {
+    const token = req.cookies.user_token;
+    if (token) {
+      const session = verifyToken(token, jwtSecret);
+      if (session && session.id) {
+        connectUserId = session.id;
+      }
+    }
+    if (!connectUserId) {
+      return res.status(401).json({ error: 'Debes iniciar sesión para conectar Google.' });
+    }
+  }
+
+  const stateToken = connectUserId ? `connect:${connectUserId}:${crypto.randomBytes(16).toString('hex')}` : crypto.randomBytes(32).toString('hex');
 
   // Si no hay clientId en local dev, redirige inmediatamente con mock parameters para facilitar desarrollo local
   if (!clientId && isLocalhost) {
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const mockCallbackUrl = `${protocol}://${host}/api/users/callback?code=mock_code&state=mock_state`;
+    const mockCallbackUrl = `${protocol}://${host}/api/users/callback?code=mock_code&state=${stateToken}`;
     
-    res.cookie('oauth_state', 'mock_state', {
+    res.cookie('oauth_state', stateToken, {
       path: '/api/users/callback',
       httpOnly: true,
       secure: false,
@@ -657,7 +675,6 @@ app.get('/api/users/google', (req, res) => {
     return res.status(500).json({ error: 'Servicio OAuth no disponible.' });
   }
 
-  const stateToken = crypto.randomBytes(32).toString('hex');
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   const redirectUri = encodeURIComponent(`${protocol}://${host}/api/users/callback`);
@@ -745,7 +762,29 @@ app.get('/api/users/callback', async (req, res) => {
 
   try {
     const cleanEmail = userEmail.toLowerCase();
-    let users = await sql`SELECT id, name, email, cart, created_at FROM usuarios WHERE email = ${cleanEmail}`;
+    
+    // Verificamos si es una acción de conectar cuenta
+    if (state && state.startsWith('connect:')) {
+      const parts = state.split(':');
+      const userId = parseInt(parts[1], 10);
+      
+      // Comprobar si ese google_email ya está vinculado a OTRO usuario diferente
+      const existingGoogleUser = await sql`SELECT id FROM usuarios WHERE google_email = ${cleanEmail} AND id != ${userId}`;
+      if (existingGoogleUser.length > 0) {
+        return res.redirect('/profile?connect_error=email_already_linked');
+      }
+      
+      // Actualizamos el usuario
+      await sql`UPDATE usuarios SET google_email = ${cleanEmail} WHERE id = ${userId}`;
+      return res.redirect('/profile?connect_success=true');
+    }
+
+    // Flujo normal de login
+    let users = await sql`
+      SELECT id, name, email, phone, google_email, cart, created_at 
+      FROM usuarios 
+      WHERE email = ${cleanEmail} OR google_email = ${cleanEmail}
+    `;
     let user;
 
     if (users.length === 0) {
@@ -753,9 +792,9 @@ app.get('/api/users/callback', async (req, res) => {
       const dummyPassword = hashPassword('oauth-google-' + crypto.randomBytes(16).toString('hex'));
       
       const insertResult = await sql`
-        INSERT INTO usuarios (name, email, password_hash, cart)
-        VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, '[]'::jsonb)
-        RETURNING id, name, email, cart, created_at
+        INSERT INTO usuarios (name, email, password_hash, google_email, cart)
+        VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, ${cleanEmail}, '[]'::jsonb)
+        RETURNING id, name, email, phone, google_email, cart, created_at
       `;
       user = insertResult[0];
     } else {
@@ -806,6 +845,56 @@ app.post('/api/users/change-password', verifyUserSessionMiddleware, async (req, 
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// POST /api/users/update-profile
+app.post('/api/users/update-profile', verifyUserSessionMiddleware, async (req, res) => {
+  const { name, phone } = req.body || {};
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre es requerido.' });
+  }
+
+  const cleanName = sanitizeString(name);
+  const cleanPhone = phone ? sanitizeString(phone) : null;
+
+  if (cleanName.length < 2 || cleanName.length > MAX_NAME_LENGTH) {
+    return res.status(400).json({ error: `El nombre debe tener entre 2 y ${MAX_NAME_LENGTH} caracteres.` });
+  }
+
+  try {
+    const result = await sql`
+      UPDATE usuarios
+      SET name = ${cleanName}, phone = ${cleanPhone}
+      WHERE id = ${req.userId}
+      RETURNING id, name, email, phone, google_email, cart, created_at
+    `;
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+    return res.status(200).json({ success: true, user: result[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al actualizar el perfil.' });
+  }
+});
+
+// POST /api/users/disconnect-google
+app.post('/api/users/disconnect-google', verifyUserSessionMiddleware, async (req, res) => {
+  try {
+    const result = await sql`
+      UPDATE usuarios
+      SET google_email = NULL
+      WHERE id = ${req.userId}
+      RETURNING id, name, email, phone, google_email, cart, created_at
+    `;
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+    return res.status(200).json({ success: true, user: result[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al desvincular Google.' });
   }
 });
 
