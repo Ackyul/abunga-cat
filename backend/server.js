@@ -114,6 +114,19 @@ if (!jwtSecret) {
   process.exit(1);
 }
 
+// Helper para obtener la URL base de frontend de forma robusta
+function getBaseUrl(req) {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.replace(/\/$/, '');
+  }
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  let host = req.headers['x-forwarded-host'] || req.headers.host;
+  if (host && host.includes(',')) {
+    host = host.split(',')[0].trim();
+  }
+  return `${protocol}://${host}`;
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  MIDDLEWARES Y SEGURIDAD
 // ═══════════════════════════════════════════════════════════════
@@ -353,9 +366,7 @@ app.get('/api/auth/google', (req, res) => {
   }
 
   const stateToken = crypto.randomBytes(32).toString('hex');
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const redirectUri = encodeURIComponent(`${protocol}://${host}/api/auth/callback`);
+  const redirectUri = encodeURIComponent(`${getBaseUrl(req)}/api/auth/callback`);
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=${stateToken}`;
   
@@ -392,9 +403,7 @@ app.get('/api/auth/callback', async (req, res) => {
     return res.status(500).json({ error: 'Configuración OAuth incompleta.' });
   }
 
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const redirectUri = `${protocol}://${host}/api/auth/callback`;
+  const redirectUri = `${getBaseUrl(req)}/api/auth/callback`;
 
   try {
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -439,7 +448,7 @@ app.get('/api/auth/callback', async (req, res) => {
         <div style="font-family:sans-serif; text-align:center; padding:50px;">
           <h1>Acceso Denegado</h1>
           <p>La cuenta no está autorizada para administrar este sitio o el correo no está verificado.</p>
-          <a href="/admin">Volver</a>
+          <a href="${getBaseUrl(req)}/admin">Volver</a>
         </div>
       `);
     }
@@ -452,7 +461,7 @@ app.get('/api/auth/callback', async (req, res) => {
     }, jwtSecret);
 
     setCookie(res, 'admin_token', token, 86400);
-    res.redirect('/admin');
+    res.redirect(`${getBaseUrl(req)}/admin`);
   } catch (err) {
     console.error('OAuth Callback Error:', err);
     return res.status(500).json({ error: 'Error durante la autenticación.' });
@@ -714,9 +723,7 @@ app.get('/api/users/google', (req, res) => {
 
   // Si no hay clientId en local dev, redirige inmediatamente con mock parameters para facilitar desarrollo local
   if (!clientId && isLocalhost) {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const mockCallbackUrl = `${protocol}://${host}/api/users/callback?code=mock_code&state=${stateToken}`;
+    const mockCallbackUrl = `${getBaseUrl(req)}/api/users/callback?code=mock_code&state=${stateToken}`;
     
     res.cookie('oauth_state', stateToken, {
       path: '/api/users/callback',
@@ -733,9 +740,7 @@ app.get('/api/users/google', (req, res) => {
     return res.status(500).json({ error: 'Servicio OAuth no disponible.' });
   }
 
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const redirectUri = encodeURIComponent(`${protocol}://${host}/api/users/callback`);
+  const redirectUri = encodeURIComponent(`${getBaseUrl(req)}/api/users/callback`);
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=${stateToken}`;
   
@@ -780,9 +785,7 @@ app.get('/api/users/callback', async (req, res) => {
       return res.status(500).json({ error: 'Configuración OAuth incompleta en el servidor.' });
     }
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const redirectUri = `${protocol}://${host}/api/users/callback`;
+    const redirectUri = `${getBaseUrl(req)}/api/users/callback`;
 
     try {
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -829,12 +832,12 @@ app.get('/api/users/callback', async (req, res) => {
       // Comprobar si ese google_email ya está vinculado a OTRO usuario diferente
       const existingGoogleUser = await sql`SELECT id FROM usuarios WHERE google_email = ${cleanEmail} AND id != ${userId}`;
       if (existingGoogleUser.length > 0) {
-        return res.redirect('/profile?connect_error=email_already_linked');
+        return res.redirect(`${getBaseUrl(req)}/profile?connect_error=email_already_linked`);
       }
       
       // Actualizamos el usuario
       await sql`UPDATE usuarios SET google_email = ${cleanEmail} WHERE id = ${userId}`;
-      return res.redirect('/profile?connect_success=true');
+      return res.redirect(`${getBaseUrl(req)}/profile?connect_success=true`);
     }
 
     // Flujo normal de login
@@ -862,7 +865,7 @@ app.get('/api/users/callback', async (req, res) => {
     const token = signToken({ id: user.id, email: user.email, iat: Date.now(), exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }, jwtSecret);
     setCookie(res, 'user_token', token, 2592000);
     
-    res.redirect('/profile');
+    res.redirect(`${getBaseUrl(req)}/profile`);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error al iniciar sesión en la base de datos.' });
