@@ -17,7 +17,95 @@ if (!databaseUrl) {
   console.error('❌ CRITICAL ERROR: DATABASE_URL no está configurada.');
   process.exit(1);
 }
-const sql = neon(databaseUrl);
+const rawSql = neon(databaseUrl);
+
+// Clase para encolar operaciones secuencialmente y evitar condiciones de carrera o sobrecarga en la DB
+class RequestQueue {
+  constructor() {
+    this.queue = [];
+    this.running = false;
+  }
+  
+  add(fn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ fn, resolve, reject });
+      this.next();
+    });
+  }
+  
+  async next() {
+    if (this.running || this.queue.length === 0) return;
+    this.running = true;
+    const { fn, resolve, reject } = this.queue.shift();
+    try {
+      const res = await fn();
+      resolve(res);
+    } catch (err) {
+      reject(err);
+    } finally {
+      this.running = false;
+      this.next();
+    }
+  }
+}
+
+const dbWriteQueue = new RequestQueue();
+
+// Función helper con lógica de reintentos exponencial y jitter para mitigar errores transitorios de red/DB
+async function executeSafeSql(operation, maxRetries = 5) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (err) {
+      attempt++;
+      const errCode = String(err.code || '');
+      const errMessage = String(err.message || '').toLowerCase();
+      
+      const isTransient = 
+        errCode.startsWith('08') || // Errores de conexión
+        errCode === '40001' ||      // Falla de serialización
+        errCode === '40P01' ||      // Deadlock
+        errCode === '55P03' ||      // Bloqueo no disponible
+        errCode === '57P01' ||      // Apagado del administrador (admin_shutdown)
+        errMessage.includes('timeout') ||
+        errMessage.includes('socket') ||
+        errMessage.includes('connection reset') ||
+        errMessage.includes('connection refused') ||
+        errMessage.includes('max connection') ||
+        errMessage.includes('rate limit') ||
+        errMessage.includes('too many connections') ||
+        errMessage.includes('abort');
+        
+      if (isTransient && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 150 + Math.floor(Math.random() * 150);
+        console.warn(`[DB WARNING] Error transitorio detectado (Código: ${errCode}, Mensaje: ${err.message}). Reintentando en ${delay}ms... (Intento ${attempt}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        if (errCode === '23505') {
+          console.warn(`[DB WARNING] Violación de restricción única (Código: 23505): ${err.message}`);
+        }
+        throw err;
+      }
+    }
+  }
+}
+
+// Wrapper seguro de la instancia de neon sql que maneja cola de escrituras y reintentos transitorios
+const sql = async (strings, ...values) => {
+  const isWriteQuery = () => {
+    if (!strings || !strings[0]) return false;
+    const clean = strings.join('').trim().toUpperCase();
+    return clean.startsWith('INSERT') || clean.startsWith('UPDATE') || clean.startsWith('DELETE');
+  };
+
+  const operation = () => executeSafeSql(() => rawSql(strings, ...values));
+  
+  if (isWriteQuery()) {
+    return dbWriteQueue.add(operation);
+  }
+  return operation();
+};
 
 // Configuración de JWT
 const jwtSecret = process.env.JWT_SECRET;
