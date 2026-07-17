@@ -424,12 +424,21 @@ app.get('/api/auth/callback', async (req, res) => {
       return res.status(400).json({ error: 'No se pudo obtener el correo.' });
     }
 
-    if (!adminEmail || userEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+    // Doble verificación de seguridad: Env y correo hardcodeado + cuenta verificada por Google
+    const allowedAdminEmail = "949237217yoshua@gmail.com";
+    const isEmailVerified = userData.email_verified === true || userData.email_verified === 'true';
+
+    if (
+      !isEmailVerified ||
+      !adminEmail ||
+      userEmail.toLowerCase() !== adminEmail.toLowerCase() ||
+      userEmail.toLowerCase() !== allowedAdminEmail.toLowerCase()
+    ) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.status(403).end(`
         <div style="font-family:sans-serif; text-align:center; padding:50px;">
           <h1>Acceso Denegado</h1>
-          <p>La cuenta no está autorizada para administrar este sitio.</p>
+          <p>La cuenta no está autorizada para administrar este sitio o el correo no está verificado.</p>
           <a href="/admin">Volver</a>
         </div>
       `);
