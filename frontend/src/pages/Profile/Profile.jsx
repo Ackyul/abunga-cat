@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Navbar } from "../../components/navbar";
 import Footer from "../../components/footer";
 import useAuthStore from "../../stores/useAuthStore";
@@ -140,7 +140,7 @@ const Profile = () => {
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center font-sans">
-        <Loader2 className="animate-spin text-green-500" size={48} />
+        <Loader2 className="animate-spin text-[#95b721]" size={48} />
         <p className="mt-4 text-gray-600 font-semibold">Cargando tu cuenta...</p>
       </div>
     );
@@ -156,8 +156,33 @@ const Profile = () => {
     : "No disponible";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col font-sans">
+      <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
+        <div className="flex items-center gap-4 z-10">
+          <Link to="/" className="shrink-0 relative">
+            <img 
+              src="/logo-abunga.png" 
+              alt="Abunga Logo" 
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-xl border-[3px] border-white/20 hover:scale-105 transition-transform"
+            />
+          </Link>
+          <div className="bg-white px-8 py-3 rounded-2xl shadow-md hidden xl:block">
+            <img 
+              src="/abunga-text.png" 
+              alt="Abunga" 
+              className="h-10 object-contain"
+            />
+          </div>
+        </div>
+        
+        <Navbar />
+        
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col">
+          <div className="h-1.5 bg-[#e24052]"></div>
+          <div className="h-1.5 bg-[#d08635]"></div>
+          <div className="h-1.5 bg-[#e3c561]"></div>
+        </div>
+      </header>
 
       <main className="flex-grow max-w-5xl w-full mx-auto px-4 py-12">
         {/* Cabecera del Dashboard */}
@@ -180,10 +205,10 @@ const Profile = () => {
           
           {/* Columna Izquierda: Tarjeta de Resumen del Usuario */}
           <div className="md:col-span-1 space-y-6">
-            <div className="bg-white rounded-3xl p-6 shadow-md border border-green-100 text-center relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-2 bg-green-500"></div>
+            <div className="bg-white rounded-3xl p-6 shadow-md border border-[#95b721]/15 text-center relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-2 bg-[#95b721]"></div>
               
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 mb-4 shadow-inner">
+              <div className="w-20 h-20 bg-[#95b721]/10 rounded-full flex items-center justify-center mx-auto text-[#8ca91f] mb-4 shadow-inner">
                 <User size={40} />
               </div>
 
@@ -192,11 +217,11 @@ const Profile = () => {
 
               <div className="mt-6 pt-6 border-t border-gray-100 space-y-4 text-left text-sm text-gray-600">
                 <div className="flex items-center gap-3">
-                  <Calendar size={16} className="text-green-500" />
+                  <Calendar size={16} className="text-[#95b721]" />
                   <span>Miembro desde: <strong>{formattedDate}</strong></span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Phone size={16} className="text-green-500" />
+                  <Phone size={16} className="text-[#95b721]" />
                   <span>Teléfono: <strong>{user.phone || "No registrado"}</strong></span>
                 </div>
               </div>
@@ -207,16 +232,16 @@ const Profile = () => {
           <div className="md:col-span-2 space-y-6">
             
             {/* Panel de Datos Personales */}
-            <div className="bg-white rounded-3xl p-6 shadow-md border border-green-100">
+            <div className="bg-white rounded-3xl p-6 shadow-md border border-[#95b721]/15">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Settings size={20} className="text-green-500" />
+                  <Settings size={20} className="text-[#95b721]" />
                   Datos Personales
                 </h3>
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-sm font-semibold text-green-600 hover:text-green-700 transition cursor-pointer"
+                    className="text-sm font-semibold text-[#8ca91f] hover:text-[#95b721] transition cursor-pointer"
                   >
                     Editar Perfil
                   </button>
@@ -248,7 +273,7 @@ const Profile = () => {
                         required
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                       />
                     </div>
                     <div>
@@ -257,7 +282,7 @@ const Profile = () => {
                         type="tel"
                         value={editPhone}
                         onChange={(e) => setEditPhone(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                         placeholder="Ej: +52 123 456 7890"
                       />
                     </div>
@@ -278,7 +303,7 @@ const Profile = () => {
                     <button
                       type="submit"
                       disabled={editLoading}
-                      className="flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-sm transition cursor-pointer"
+                      className="flex items-center px-4 py-2 bg-[#95b721] hover:bg-[#84a31d] text-white rounded-xl font-semibold text-sm transition cursor-pointer"
                     >
                       {editLoading ? <Loader2 size={16} className="animate-spin mr-2" /> : "Guardar Cambios"}
                     </button>
@@ -288,9 +313,9 @@ const Profile = () => {
             </div>
 
             {/* Panel de Conexiones OAuth (Google) */}
-            <div className="bg-white rounded-3xl p-6 shadow-md border border-green-100">
+            <div className="bg-white rounded-3xl p-6 shadow-md border border-[#95b721]/15">
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-                <Link2 size={20} className="text-green-500" />
+                <Link2 size={20} className="text-[#95b721]" />
                 Cuentas Vinculadas
               </h3>
               <p className="text-xs text-gray-500 mb-6">
@@ -328,7 +353,7 @@ const Profile = () => {
                 ) : (
                   <button
                     onClick={handleConnectGoogle}
-                    className="flex items-center text-xs font-bold text-green-700 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 px-3 py-1.5 rounded-xl transition cursor-pointer"
+                    className="flex items-center text-xs font-bold text-[#8ca91f] hover:text-[#95b721] bg-[#95b721]/5 hover:bg-[#95b721]/10 border border-[#95b721]/20 px-3 py-1.5 rounded-xl transition cursor-pointer"
                   >
                     <Link2 size={14} className="mr-1.5" />
                     Vincular cuenta
@@ -338,16 +363,16 @@ const Profile = () => {
             </div>
 
             {/* Panel de Seguridad / Contraseña */}
-            <div className="bg-white rounded-3xl p-6 shadow-md border border-green-100">
+            <div className="bg-white rounded-3xl p-6 shadow-md border border-[#95b721]/15">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Key size={20} className="text-green-500" />
+                  <Key size={20} className="text-[#95b721]" />
                   Seguridad
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowChangePassword(!showChangePassword)}
-                  className="text-sm font-semibold text-green-600 hover:text-green-700 transition cursor-pointer"
+                  className="text-sm font-semibold text-[#8ca91f] hover:text-[#95b721] transition cursor-pointer"
                 >
                   {showChangePassword ? "Cancelar" : "Cambiar Contraseña"}
                 </button>
@@ -362,7 +387,7 @@ const Profile = () => {
                       required
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                       placeholder="••••••••"
                     />
                   </div>
@@ -373,7 +398,7 @@ const Profile = () => {
                       required
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                       placeholder="Mínimo 6 caracteres"
                     />
                   </div>
@@ -384,7 +409,7 @@ const Profile = () => {
                       required
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                       placeholder="••••••••"
                     />
                   </div>
@@ -393,7 +418,7 @@ const Profile = () => {
                     <button
                       type="submit"
                       disabled={changePasswordLoading}
-                      className="flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-sm transition cursor-pointer"
+                      className="flex items-center px-4 py-2 bg-[#95b721] hover:bg-[#84a31d] text-white rounded-xl font-semibold text-sm transition cursor-pointer"
                     >
                       {changePasswordLoading ? <Loader2 size={16} className="animate-spin mr-2" /> : "Actualizar Contraseña"}
                     </button>

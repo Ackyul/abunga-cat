@@ -118,11 +118,36 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col font-sans">
+      <header className="bg-linear-to-r from-[#8ca91f] to-[#9ec425] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
+        <div className="flex items-center gap-4 z-10">
+          <Link to="/" className="shrink-0 relative">
+            <img 
+              src="/logo-abunga.png" 
+              alt="Abunga Logo" 
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-xl border-[3px] border-white/20 hover:scale-105 transition-transform"
+            />
+          </Link>
+          <div className="bg-white px-8 py-3 rounded-2xl shadow-md hidden xl:block">
+            <img 
+              src="/abunga-text.png" 
+              alt="Abunga" 
+              className="h-10 object-contain"
+            />
+          </div>
+        </div>
+        
+        <Navbar />
+        
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col">
+          <div className="h-1.5 bg-[#e24052]"></div>
+          <div className="h-1.5 bg-[#d08635]"></div>
+          <div className="h-1.5 bg-[#e3c561]"></div>
+        </div>
+      </header>
 
       <div className="flex-grow flex items-center justify-center px-4 py-16">
-        <div className="max-w-md w-full bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-green-100 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+        <div className="max-w-md w-full bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-[#95b721]/15 overflow-hidden transition-all duration-300 hover:shadow-2xl">
           
           {/* Header del Formulario */}
           <div className="p-8 pb-4 text-center">
@@ -154,7 +179,7 @@ const Login = () => {
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
                       placeholder="correo@ejemplo.com"
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50"
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50"
                     />
                   </div>
                 </div>
@@ -167,7 +192,7 @@ const Login = () => {
                     <button
                       type="button"
                       onClick={() => setForgotFlow(true)}
-                      className="text-xs font-semibold text-green-600 hover:text-green-700 transition"
+                      className="text-xs font-semibold text-[#8ca91f] hover:text-[#95b721] transition"
                     >
                       ¿La olvidaste?
                     </button>
@@ -182,7 +207,7 @@ const Login = () => {
                       value={passwordInput}
                       onChange={(e) => setPasswordInput(e.target.value)}
                       placeholder="••••••••"
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50"
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50"
                     />
                   </div>
                 </div>
@@ -190,7 +215,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-[#95b721] hover:bg-[#84a31d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#95b721] transition-all cursor-pointer disabled:opacity-50"
                 >
                   {loading ? (
                     <Loader2 className="animate-spin mr-2" size={18} />
@@ -213,7 +238,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center py-3 px-4 border border-gray-200 rounded-2xl shadow-sm bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center py-3 px-4 border border-gray-200 rounded-2xl shadow-sm bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#95b721] transition-all cursor-pointer"
                 >
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                     <g transform="matrix(1, 0, 0, 1, 0, 0)">
@@ -228,7 +253,7 @@ const Login = () => {
 
                 <p className="mt-6 text-center text-sm text-gray-600">
                   ¿No tienes una cuenta?{" "}
-                  <Link to="/register" className="font-semibold text-green-600 hover:text-green-700 transition">
+                  <Link to="/register" className="font-semibold text-[#8ca91f] hover:text-[#95b721] transition">
                     Regístrate aquí
                   </Link>
                 </p>
@@ -253,7 +278,7 @@ const Login = () => {
                           value={resetEmail}
                           onChange={(e) => setResetEmail(e.target.value)}
                           placeholder="correo@ejemplo.com"
-                          className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50"
+                          className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50"
                         />
                       </div>
                     </div>
@@ -261,7 +286,7 @@ const Login = () => {
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition-all cursor-pointer disabled:opacity-50"
+                      className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-[#95b721] hover:bg-[#84a31d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#95b721] transition-all cursor-pointer disabled:opacity-50"
                     >
                       {resetLoading ? (
                         <Loader2 className="animate-spin mr-2" size={18} />
@@ -300,7 +325,7 @@ const Login = () => {
                           value={resetCode}
                           onChange={(e) => setResetCode(e.target.value)}
                           placeholder="123456"
-                          className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50 text-center tracking-widest font-mono text-lg font-bold"
+                          className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50 text-center tracking-widest font-mono text-lg font-bold"
                         />
                       </div>
                     </div>
@@ -315,7 +340,7 @@ const Login = () => {
                         value={resetNewPassword}
                         onChange={(e) => setResetNewPassword(e.target.value)}
                         placeholder="Mínimo 6 caracteres"
-                        className="block w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50"
+                        className="block w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50"
                       />
                     </div>
 
@@ -329,14 +354,14 @@ const Login = () => {
                         value={resetConfirmNewPassword}
                         onChange={(e) => setResetConfirmNewPassword(e.target.value)}
                         placeholder="Repite la contraseña"
-                        className="block w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all text-sm bg-gray-50/50"
+                        className="block w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#95b721] focus:border-transparent transition-all text-sm bg-gray-50/50"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 transition-all cursor-pointer disabled:opacity-50"
+                      className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-sm font-semibold text-white bg-[#95b721] hover:bg-[#84a31d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#95b721] transition-all cursor-pointer disabled:opacity-50"
                     >
                       {resetLoading ? (
                         <Loader2 className="animate-spin mr-2" size={18} />
