@@ -409,51 +409,9 @@ export default function Admin() {
               <p className="text-gray-500 text-sm">Inicia sesión de forma segura para gestionar el catálogo</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Contraseña de acceso</label>
-                <div className="relative">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#95b721] font-medium"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loginLoading}
-                className="w-full bg-[#95b721] hover:bg-[#85a31d] disabled:bg-[#95b721]/50 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-              >
-                {loginLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <span>Entrar con Contraseña</span>
-                )}
-              </button>
-            </form>
-
-            <div className="relative flex items-center justify-center py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <span className="relative bg-white px-4 text-xs font-bold text-gray-400 uppercase">O también</span>
-            </div>
-
             <button
               onClick={handleGoogleLogin}
-              className="w-full border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3"
+              className="w-full border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="h-5 w-5" />
               <span>Acceder con tu cuenta Google</span>

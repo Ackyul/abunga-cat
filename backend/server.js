@@ -336,46 +336,7 @@ app.get('/api/auth/session', (req, res) => {
 
 // POST /api/auth/login
 app.post('/api/auth/login', (req, res) => {
-  const clientIp = req.ip || 'unknown';
-  if (isRateLimited(clientIp, 'admin_login')) {
-    return res.status(429).json({ error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' });
-  }
-
-  const { password } = req.body || {};
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@abunga.com';
-
-  if (!adminPassword) {
-    return res.status(500).json({ error: 'Servicio no disponible temporalmente.' });
-  }
-  
-  if (!password || typeof password !== 'string' || password.length > 200) {
-    return res.status(401).json({ error: 'Contraseña de administrador incorrecta.' });
-  }
-
-  const passwordBuffer = Buffer.from(password);
-  const adminBuffer = Buffer.from(adminPassword);
-  
-  let isMatch = false;
-  if (passwordBuffer.length === adminBuffer.length) {
-    isMatch = crypto.timingSafeEqual(passwordBuffer, adminBuffer);
-  } else {
-    crypto.timingSafeEqual(adminBuffer, adminBuffer);
-  }
-
-  if (isMatch) {
-    const token = signToken({ 
-      email: adminEmail,
-      role: 'admin',
-      iat: Date.now(),
-      exp: Date.now() + 24 * 60 * 60 * 1000 // 24 horas
-    }, jwtSecret);
-    
-    setCookie(res, 'admin_token', token, 86400);
-    return res.status(200).json({ success: true, email: adminEmail });
-  }
-  
-  return res.status(401).json({ error: 'Contraseña de administrador incorrecta.' });
+  return res.status(403).json({ error: 'El inicio de sesión por contraseña está desactivado. Use Google OAuth.' });
 });
 
 // POST /api/auth/logout
