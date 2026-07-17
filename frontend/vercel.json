@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://abungabackend-0hpnbqou.b4a.run/api/:path*"
+      "destination": "https://abunga-backend.fly.dev/api/:path*"
     },
     {
       "source": "/(.*)",
