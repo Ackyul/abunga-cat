@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '../../components/navbar';
 import Footer from '../../components/footer';
 import { toast } from 'sonner';
-import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search } from 'lucide-react';
+import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search, Package, MapPin, Clock, Truck } from 'lucide-react';
 import BannerGenerator from '../../components/banner-generator';
 
 const getProductImage = (product) => {
@@ -61,8 +61,10 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('products');
   const [products, setProducts] = useState([]);
   const [news, setNews] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [uploadingId, setUploadingId] = useState(null);
 
   // New product form state
@@ -112,19 +114,42 @@ export default function Admin() {
   const fetchDashboardData = async () => {
     setDataLoading(true);
     try {
-      const [prodRes, newsRes] = await Promise.all([
+      const [prodRes, newsRes, ordersRes] = await Promise.all([
         fetch('/api/products'),
-        fetch('/api/news')
+        fetch('/api/news'),
+        fetch('/api/admin/orders')
       ]);
       const prodData = await prodRes.json();
       const newsData = await newsRes.json();
+      const ordersData = await ordersRes.json();
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setNews(Array.isArray(newsData) ? newsData : []);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (err) {
-      toast.error('Error al cargar datos del catálogo.');
+      console.error(err);
+      toast.error('Error al cargar datos de la consola.');
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: newStatus })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Pedido ${data.codigo} actualizado a "${newStatus}".`);
+        fetchDashboardData();
+      } else {
+        toast.error(data.error || 'Error al cambiar estado.');
+      }
+    } catch (e) {
+      toast.error('Error al conectar con el servidor.');
     }
   };
 
@@ -495,6 +520,17 @@ export default function Admin() {
             <Camera className="h-4 w-4" />
             <span>Generador de Fondos</span>
           </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`py-4 px-6 font-extrabold text-sm uppercase tracking-wider flex items-center gap-2 border-b-4 transition-all ${
+              activeTab === 'orders'
+                ? 'border-[#95b721] text-[#95b721]'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            <span>Pedidos ({orders.filter(o => o.estado === 'Pendiente de Pago').length} Pendientes)</span>
+          </button>
         </div>
       </div>
 
@@ -844,6 +880,140 @@ export default function Admin() {
         ) : activeTab === 'banners' ? (
           // TAB: BANNER GENERATOR
           <BannerGenerator products={products} />
+        ) : activeTab === 'orders' ? (
+          // TAB: ORDERS MANAGEMENT
+          <div className="space-y-6 animate-fade-in-up">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 shrink-0">
+                <span>Gestión de Pedidos (Arequipa)</span>
+                <span className="text-xs bg-gray-100 text-[#95b721] font-black px-2.5 py-1 rounded-full border border-gray-200">
+                  {orders.length} Totales
+                </span>
+              </h2>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar pedido, cliente, cel..."
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Orders listing */}
+            {orders.filter(order => {
+              const q = orderSearchQuery.toLowerCase();
+              return !q || 
+                order.codigo?.toLowerCase().includes(q) || 
+                order.nombre_cliente?.toLowerCase().includes(q) ||
+                order.telefono_cliente?.toLowerCase().includes(q) ||
+                order.direccion?.toLowerCase().includes(q);
+            }).length === 0 ? (
+              <div className="bg-white border border-gray-100 rounded-3xl p-12 text-center text-gray-500 font-medium">
+                No se encontraron pedidos con los criterios ingresados.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {orders.filter(order => {
+                  const q = orderSearchQuery.toLowerCase();
+                  return !q || 
+                    order.codigo?.toLowerCase().includes(q) || 
+                    order.nombre_cliente?.toLowerCase().includes(q) ||
+                    order.telefono_cliente?.toLowerCase().includes(q) ||
+                    order.direccion?.toLowerCase().includes(q);
+                }).map((order) => (
+                  <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col md:flex-row justify-between gap-6 relative text-left">
+                    <div className="space-y-4 flex-1">
+                      <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3">
+                        <span className="font-mono font-black text-xl text-gray-900">{order.codigo}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(order.created_at).toLocaleString('es-PE')}
+                        </span>
+                        <span className="text-xs bg-gray-50 border border-gray-200 text-gray-500 font-bold px-2 py-0.5 rounded-md">
+                          Enviado vía PedidosYa
+                        </span>
+                      </div>
+
+                      {/* Info del Cliente */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cliente</p>
+                          <p className="font-extrabold text-gray-800">{order.nombre_cliente}</p>
+                          <p className="text-xs">{order.telefono_cliente}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Dirección de Envío</p>
+                          <p className="font-extrabold text-gray-800">{order.direccion}</p>
+                          {order.referencia && (
+                            <p className="text-xs italic text-gray-400 mt-0.5">Ref: {order.referencia}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Detalle de Productos */}
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-150">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Detalle de Compra</p>
+                        <div className="space-y-1">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs">
+                              <span className="font-bold text-gray-700">{item.name} ({item.selectedWeight}) <span className="text-gray-400">x{item.quantity}</span></span>
+                              <span className="font-black text-gray-600">S/ {(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div className="h-px bg-gray-200 my-2" />
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>Subtotal</span>
+                            <span>S/ {parseFloat(order.subtotal).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>Delivery (Variable)</span>
+                            <span>S/ {parseFloat(order.costo_envio).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm font-black text-gray-900 mt-1">
+                            <span>Total del Pedido</span>
+                            <span className="text-[#95b721]">S/ {parseFloat(order.total).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acciones del Admin */}
+                    <div className="flex flex-col justify-between items-end gap-4 min-w-[200px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+                      <div className="w-full space-y-1.5">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide">Estado del Pedido</label>
+                        <select
+                          value={order.estado}
+                          onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                          className={`w-full text-xs font-black px-3.5 py-2.5 rounded-xl border transition cursor-pointer focus:outline-none ${
+                            order.estado === 'Pendiente de Pago' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
+                            order.estado === 'Preparando' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                            order.estado === 'Enviado' ? 'bg-purple-50 text-purple-600 border-purple-200' :
+                            order.estado === 'Entregado' ? 'bg-green-50 text-green-600 border-green-200' :
+                            'bg-red-50 text-red-500 border-red-200'
+                          }`}
+                        >
+                          <option value="Pendiente de Pago">Pendiente de Pago</option>
+                          <option value="Preparando">Preparando</option>
+                          <option value="Enviado">Enviado (En Camino)</option>
+                          <option value="Entregado">Entregado</option>
+                          <option value="Cancelado">Cancelado</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1 w-full text-right text-xs text-gray-400 mt-auto">
+                        <p>Coordenadas de entrega:</p>
+                        <p className="font-mono text-[10px] bg-gray-50 px-2 py-1 rounded-md inline-block border border-gray-150">{order.latitud}, {order.longitud}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           // TAB: NEWS
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up">

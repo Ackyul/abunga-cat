@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Footer from "../../components/footer";
 import useCartStore from "../../stores/useCartStore";
 import useAuthStore from "../../stores/useAuthStore";
 import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, MapPin, CreditCard, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Navbar } from "../../components/navbar";
 
@@ -12,11 +12,270 @@ const Cart = () => {
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuthStore();
 
+    // Estados de checkout multi-pasos
+    const [step, setStep] = useState(1); // 1: Cart, 2: Shipping, 3: Yape Payment, 4: Success
+    const [nombre, setNombre] = useState("");
+    const [telefono, setTelefono] = useState("");
+    const [ciudad, setCiudad] = useState("Arequipa");
+    const [distrito, setDistrito] = useState("Cayma");
+    const [direccion, setDireccion] = useState("");
+    const [referencia, setReferencia] = useState("");
+    
+    // Coordenadas iniciales (Plaza de Yanahuara, Arequipa)
+    const [lat, setLat] = useState(-16.3988);
+    const [lng, setLng] = useState(-71.5369);
+    const [costoEnvio, setCostoEnvio] = useState(0);
+    const [estimating, setEstimating] = useState(false);
+    const [createdOrder, setCreatedOrder] = useState(null);
+    const [polling, setPolling] = useState(false);
+
+    const mapRef = useRef(null);
+    const markerRef = useRef(null);
+
+    // Prellenar datos de usuario al cargar
+    useEffect(() => {
+        if (user) {
+            setNombre(user.name || "");
+            setTelefono(user.phone || "");
+        }
+    }, [user]);
+
+    // Redirección si no está logueado
     useEffect(() => {
         if (!authLoading && !user) {
             navigate("/profile");
         }
     }, [user, authLoading, navigate]);
+
+    // Carga dinámica de Leaflet en el Paso 2 (Solo si se selecciona Arequipa)
+    useEffect(() => {
+        if (step !== 2 || ciudad !== "Arequipa") return;
+
+        // Cargar CSS de Leaflet
+        if (!document.getElementById("leaflet-css")) {
+            const link = document.createElement("link");
+            link.id = "leaflet-css";
+            link.rel = "stylesheet";
+            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            document.head.appendChild(link);
+        }
+
+        // Inicializar Mapa
+        const initLeafletMap = () => {
+            if (!window.L) return;
+            const container = document.getElementById("map-picker");
+            if (!container) return;
+
+            if (container._leaflet_id) return; // Evitar reinicializar
+
+            const map = window.L.map("map-picker").setView([lat, lng], 14);
+            mapRef.current = map;
+
+            window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            // Marcador personalizado para producción
+            const defaultIcon = window.L.icon({
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            const marker = window.L.marker([lat, lng], { draggable: true, icon: defaultIcon }).addTo(map);
+            markerRef.current = marker;
+
+            const handleLocationUpdate = (latitude, longitude) => {
+                setLat(latitude);
+                setLng(longitude);
+                estimateShipping(latitude, longitude);
+            };
+
+            // Estimar la primera vez
+            handleLocationUpdate(lat, lng);
+
+            marker.on("dragend", () => {
+                const pos = marker.getLatLng();
+                handleLocationUpdate(pos.lat, pos.lng);
+            });
+
+            map.on("click", (e) => {
+                marker.setLatLng(e.latlng);
+                handleLocationUpdate(e.latlng.lat, e.latlng.lng);
+            });
+        };
+
+        if (!window.L) {
+            const script = document.createElement("script");
+            script.id = "leaflet-js";
+            script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            script.onload = initLeafletMap;
+            document.body.appendChild(script);
+        } else {
+            const t = setTimeout(initLeafletMap, 150);
+            return () => clearTimeout(t);
+        }
+    }, [step, ciudad]);
+
+    // Polling para chequear validación de Yape automática
+    useEffect(() => {
+        if (!polling || !createdOrder) return;
+
+        let intervalId;
+        const checkPaymentStatus = async () => {
+            try {
+                const res = await fetch("/api/orders/my-orders");
+                if (res.ok) {
+                    const orders = await res.json();
+                    const currentOrder = orders.find(o => o.codigo === createdOrder.codigo);
+                    if (currentOrder && currentOrder.estado === "Preparando") {
+                        setPolling(false);
+                        setStep(4);
+                        clearCart();
+                        try {
+                            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                            audio.play();
+                        } catch (e) {
+                            // Silenciar error si el navegador bloquea reproducción espontánea
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error al consultar estado de pago:", e);
+            }
+        };
+
+        checkPaymentStatus();
+        intervalId = setInterval(checkPaymentStatus, 3000);
+
+        return () => clearInterval(intervalId);
+    }, [polling, createdOrder, clearCart]);
+
+    // Función para estimar envío
+    const estimateShipping = async (latitude, longitude) => {
+        setEstimating(true);
+        try {
+            const res = await fetch("/api/shipping/estimate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ lat: latitude, lng: longitude })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCostoEnvio(data.cost);
+            } else {
+                setCostoEnvio(7.00); // Fallback tarifa plana
+            }
+        } catch (e) {
+            console.error("Error estimando envío:", e);
+            setCostoEnvio(7.00);
+        } finally {
+            setEstimating(false);
+        }
+    };
+
+    // Crear pedido en la base de datos (Step 2 -> Step 3)
+    const handleCreateOrder = async (e) => {
+        e.preventDefault();
+        if (!nombre || !telefono || !direccion) {
+            alert("Por favor llena todos los campos obligatorios.");
+            return;
+        }
+
+        if (ciudad !== "Arequipa") {
+            handleRusticOrder();
+            return;
+        }
+
+        setEstimating(true);
+        try {
+            const orderPayload = {
+                nombre_cliente: nombre,
+                telefono_cliente: telefono,
+                ciudad: ciudad,
+                direccion: `${direccion} (${distrito})`,
+                latitud: lat,
+                longitud: lng,
+                referencia: referencia || "",
+                items: cart,
+                subtotal: parseFloat(getTotalPrice()),
+                costo_envio: parseFloat(costoEnvio),
+                total: parseFloat(getTotalPrice()) + parseFloat(costoEnvio)
+            };
+
+            const res = await fetch("/api/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(orderPayload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCreatedOrder(data);
+                setStep(3);
+                setPolling(true);
+            } else {
+                alert("Error al registrar pedido: " + (data.error || "Intente nuevamente."));
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            alert("Error de conexión al registrar pedido.");
+        } finally {
+            setEstimating(false);
+        }
+    };
+
+    // Enviar a WhatsApp en caso de ser de otra provincia (Flujo Rústico manual)
+    const handleRusticOrder = () => {
+        let message = `¡Hola Abunga! 🌟 Soy ${nombre} (Celular: ${telefono}). Me gustaría coordinar un envío nacional:\n\n`;
+        cart.forEach((item) => {
+            const itemTotal = (item.price * item.quantity).toFixed(2);
+            message += `*• ${item.name} (${item.selectedWeight})*\n`;
+            message += `  Cantidad: ${item.quantity} x S/ ${item.price.toFixed(2)} = S/ ${itemTotal}\n\n`;
+        });
+        message += `*Subtotal:* S/ ${getTotalPrice().toFixed(2)}\n\n`;
+        message += `*Ciudad de destino:* ${ciudad}\n`;
+        message += `*Dirección:* ${direccion}\n`;
+        message += `Quedo atento a la cotización del envío por Shalom/Olva. ¡Gracias!`;
+        
+        window.location.href = `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
+    };
+
+    // Estado para mostrar ayuda de soporte si el yape demora en validarse
+    const [showSupportAlert, setShowSupportAlert] = useState(false);
+
+    // Timer de alerta de soporte en Paso 3
+    useEffect(() => {
+        if (step !== 3) {
+            setShowSupportAlert(false);
+            return;
+        }
+        const timer = setTimeout(() => {
+            setShowSupportAlert(true);
+        }, 20000); // 20 segundos de espera activa
+        return () => clearTimeout(timer);
+    }, [step]);
+
+    // URL de WhatsApp de soporte técnico
+    const getWhatsAppSupportUrl = (order) => {
+        if (!order) return "";
+        let message = `¡Hola Abunga! 🌟 Tengo una consulta sobre el pago automático de mi Pedido *#${order.codigo}*.\n\n`;
+        message += `Ya yapeé un monto de S/ ${order.total} pero aún figura en espera. ¿Me podrían ayudar a verificarlo manualmente?`;
+        return `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
+    };
+
+    // URL de WhatsApp de confirmación manual/éxito
+    const getWhatsAppMessageUrl = (order) => {
+        if (!order) return "";
+        let message = `¡Hola Abunga! 🌟 Acabo de realizar mi pedido *#${order.codigo}* por Yape.\n\n`;
+        message += `*Cliente:* ${order.nombre_cliente}\n`;
+        message += `*Monto Total:* S/ ${order.total}\n`;
+        message += `*Dirección:* ${order.direccion}\n\n`;
+        message += `El pago ya fue verificado automáticamente en la web. Quedo atento a la preparación. ¡Gracias!`;
+        return `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
+    };
 
     if (authLoading || !user) {
         return (
@@ -26,40 +285,7 @@ const Cart = () => {
         );
     }
 
-    const handleMakeOrder = () => {
-        const userName = user?.name || "";
-        const userPhone = user?.phone || "";
-        const namePart = userName ? ` Soy ${userName}` : "";
-        const phonePart = userPhone ? ` (Teléfono: ${userPhone})` : "";
-        const introSeparator = namePart || phonePart ? "." : "";
-        let message = `¡Hola Abunga! 🌟${namePart}${phonePart}${introSeparator} Me gustaría realizar el siguiente pedido:\n\n`;
-        cart.forEach((item) => {
-            const itemTotal = (item.price * item.quantity).toFixed(2);
-            message += `*• ${item.name} (${item.selectedWeight})*\n`;
-            if (item.brand) message += `  Marca: ${item.brand}\n`;
-            if (item.fruits && item.fruits.length > 0) {
-                message += `  Contiene: ${item.fruits.join(", ")}\n`;
-            }
-            message += `  Cantidad: ${item.quantity} x S/ ${item.price.toFixed(2)} = S/ ${itemTotal}\n\n`;
-        });
-        message += `*Total a pagar:* S/ ${getTotalPrice().toFixed(2)}\n\n`;
-        message += "Quedo atento a la confirmación de mi pedido. ¡Gracias!";
-
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://wa.me/51973391928?text=${encodedMessage}`;
-        
-        try {
-            const newWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
-                window.location.href = whatsappUrl;
-            }
-        } catch (e) {
-            console.error("Popup blocked or failed, using redirect fallback:", e);
-            window.location.href = whatsappUrl;
-        }
-    };
-
-    if (cart.length === 0) {
+    if (cart.length === 0 && step < 4) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
                 <header className="bg-[#95b721] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
@@ -100,7 +326,7 @@ const Cart = () => {
     }
 
     return (
-        <div className="min-h-screen bg-white flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <header className="bg-[#95b721] py-4 flex flex-row justify-between items-center px-4 md:px-8 relative shadow-sm shrink-0">
                 <div className="flex items-center gap-4 z-10">
                     <Link to="/" className="shrink-0 relative">
@@ -124,94 +350,423 @@ const Cart = () => {
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-8 max-w-6xl grow">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        {cart.map((item) => (
-                            <div key={`${item.id}-${item.selectedWeight}`} className="bg-white p-5 rounded-3xl border-2 border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 relative group">
-                                {/* Info del producto (imagen + textos) */}
-                                <div className="flex flex-row items-start gap-4 flex-1">
-                                    <div className="h-20 w-20 md:h-24 md:w-24 shrink-0 bg-gray-50 rounded-xl p-2 flex items-center justify-center">
-                                         <img src={item.image} alt={item.name} className="h-full w-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+            <main className="container mx-auto px-4 py-8 max-w-6xl grow flex flex-col justify-center">
+                
+                {/* INDICADOR DE PASOS */}
+                {step < 4 && (
+                    <div className="flex justify-center items-center gap-4 md:gap-8 mb-8 text-sm md:text-base">
+                        <div className={`flex items-center gap-2 font-bold ${step >= 1 ? 'text-[#95b721]' : 'text-gray-450'}`}>
+                            <span className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 1 ? 'border-[#95b721] bg-[#95b721]/10' : 'border-gray-300'}`}>1</span>
+                            <span>Carrito</span>
+                        </div>
+                        <div className="w-8 md:w-16 h-0.5 bg-gray-200" />
+                        <div className={`flex items-center gap-2 font-bold ${step >= 2 ? 'text-[#95b721]' : 'text-gray-400'}`}>
+                            <span className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 2 ? 'border-[#95b721] bg-[#95b721]/10' : 'border-gray-200'}`}>2</span>
+                            <span>Envío</span>
+                        </div>
+                        <div className="w-8 md:w-16 h-0.5 bg-gray-200" />
+                        <div className={`flex items-center gap-2 font-bold ${step >= 3 ? 'text-[#95b721]' : 'text-gray-400'}`}>
+                            <span className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 3 ? 'border-[#95b721] bg-[#95b721]/10' : 'border-gray-200'}`}>3</span>
+                            <span>Pago</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* PASO 1: RESUMEN DE CARRITO */}
+                {step === 1 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            {cart.map((item) => (
+                                <div key={`${item.id}-${item.selectedWeight}`} className="bg-white p-5 rounded-3xl border-2 border-gray-150/50 shadow-sm flex flex-col md:flex-row gap-4 relative group">
+                                    <div className="flex flex-row items-start gap-4 flex-1">
+                                        <div className="h-20 w-20 md:h-24 md:w-24 shrink-0 bg-gray-50 rounded-xl p-2 flex items-center justify-center">
+                                             <img src={item.image} alt={item.name} className="h-full w-full object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                                        </div>
+                                        <div className="flex-1 text-left min-w-0 pr-8">
+                                            <h3 className="font-bold text-lg md:text-xl text-gray-900 leading-snug break-words">{item.name}</h3>
+                                            <p className="text-gray-500 text-xs md:text-sm uppercase tracking-wide font-semibold mt-0.5">{item.brand}</p>
+                                            {item.fruits && item.fruits.length > 0 && (
+                                                <div className="mt-1 text-xs md:text-sm text-gray-500 truncate">
+                                                    <span className="font-semibold">Contiene:</span> {item.fruits.join(", ")}
+                                                </div>
+                                            )}
+                                            <span className="inline-block mt-2 bg-[#f0fdf4] text-[#95b721] text-xs font-bold px-2 py-0.5 rounded-md border border-[#95b721]/20">
+                                                {item.selectedWeight}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 text-left min-w-0 pr-8">
-                                        <h3 className="font-bold text-lg md:text-xl text-gray-900 leading-snug break-words">{item.name}</h3>
-                                        <p className="text-gray-500 text-xs md:text-sm uppercase tracking-wide font-semibold mt-0.5">{item.brand}</p>
-                                        {item.fruits && item.fruits.length > 0 && (
-                                            <div className="mt-1 text-xs md:text-sm text-gray-500 truncate">
-                                                <span className="font-semibold">Contiene:</span> {item.fruits.join(", ")}
-                                            </div>
-                                        )}
-                                        <span className="inline-block mt-2 bg-[#f0fdf4] text-[#95b721] text-xs font-bold px-2 py-0.5 rounded-md border border-[#95b721]/20">
-                                            {item.selectedWeight}
-                                        </span>
+                                    
+                                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 pt-3 md:pt-0 border-t border-gray-100 md:border-t-0 md:mr-12">
+                                        <div className="flex items-center gap-3 bg-gray-100 rounded-full p-1">
+                                            <button 
+                                                onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity - 1)}
+                                                className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 disabled:opacity-50 text-sm"
+                                                disabled={item.quantity <= 1}
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-bold text-sm md:text-lg w-5 text-center">{item.quantity}</span>
+                                            <button 
+                                                onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity + 1)}
+                                                className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 text-sm"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <p className="font-black text-xl md:text-2xl text-[#95b721] shrink-0">S/ {(item.price * item.quantity).toFixed(2)}</p>
                                     </div>
+
+                                    <button 
+                                        onClick={() => removeFromCart(item.id, item.selectedWeight)}
+                                        className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                                    >
+                                        <Trash2 className="h-5 w-5" />
+                                    </button>
                                 </div>
+                            ))}
+                        </div>
+
+                        <div className="lg:col-span-1">
+                            <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-150 sticky top-4">
+                                <h3 className="text-2xl font-extrabold text-gray-900 mb-6">Resumen</h3>
                                 
-                                {/* Controles (cantidad + precio) */}
-                                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 pt-3 md:pt-0 border-t border-gray-100 md:border-t-0 md:mr-12">
-                                    <div className="flex items-center gap-3 bg-gray-100 rounded-full p-1">
-                                        <button 
-                                            onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity - 1)}
-                                            className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 disabled:opacity-50 text-sm"
-                                            disabled={item.quantity <= 1}
-                                        >
-                                            -
-                                        </button>
-                                        <span className="font-bold text-sm md:text-lg w-5 text-center">{item.quantity}</span>
-                                        <button 
-                                            onClick={() => updateQuantity(item.id, item.selectedWeight, item.quantity + 1)}
-                                            className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center bg-white rounded-full shadow-sm font-bold hover:bg-gray-50 text-sm"
-                                        >
-                                            +
-                                        </button>
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between items-center text-gray-600 text-lg">
+                                        <span>Subtotal</span>
+                                        <span className="font-bold">S/ {getTotalPrice().toFixed(2)}</span>
                                     </div>
-                                    <p className="font-black text-xl md:text-2xl text-[#95b721] shrink-0">S/ {(item.price * item.quantity).toFixed(2)}</p>
+                                    <div className="h-px border-t-2 border-dashed border-gray-200 my-4" />
+                                    <div className="flex justify-between items-center text-2xl font-black text-gray-900">
+                                        <span>Total</span>
+                                        <span>S/ {getTotalPrice().toFixed(2)}</span>
+                                    </div>
                                 </div>
 
-                                {/* Botón de eliminar */}
-                                <button 
-                                    onClick={() => removeFromCart(item.id, item.selectedWeight)}
-                                    className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                                <button
+                                    onClick={() => setStep(2)}
+                                    className="w-full mb-4 flex items-center justify-center gap-2 bg-[#95b721] hover:bg-[#e24052] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 text-lg cursor-pointer"
                                 >
-                                    <Trash2 className="h-5 w-5" />
+                                    Continuar con Envío <ArrowRight size={18} />
+                                </button>
+
+                                 <button
+                                    onClick={clearCart}
+                                    className="w-full text-red-500 font-bold py-2 text-sm hover:underline cursor-pointer"
+                                >
+                                    Vaciar Pedido
                                 </button>
                             </div>
-                        ))}
+                        </div>
                     </div>
+                )}
 
-                    <div className="lg:col-span-1">
-                        <div className="bg-white p-8 rounded-3xl shadow-lg border-2 border-gray-100 sticky top-4">
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-6">Resumen</h3>
-                            
-                            <div className="space-y-4 mb-8">
-                                <div className="flex justify-between items-center text-gray-600 text-lg">
-                                    <span>Subtotal</span>
-                                    <span className="font-bold">S/ {getTotalPrice().toFixed(2)}</span>
+                {/* PASO 2: DIRECCIÓN Y ENVÍO */}
+                {step === 2 && (
+                    <form onSubmit={handleCreateOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-3xl border border-gray-150 shadow-sm space-y-6">
+                            <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2 mb-4">
+                                <MapPin className="text-[#95b721]" /> Datos de Entrega
+                            </h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex flex-col text-left">
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1">Nombre de quien Recibe *</label>
+                                    <input 
+                                        type="text" 
+                                        required
+                                        value={nombre}
+                                        onChange={(e) => setNombre(e.target.value)}
+                                        className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                        placeholder="Ej. Juan Pérez"
+                                    />
                                 </div>
-                                <div className="h-px bg-dashed bg-gray-300 my-4" />
-                                <div className="flex justify-between items-center text-2xl font-black text-gray-900">
-                                    <span>Total</span>
-                                    <span>S/ {getTotalPrice().toFixed(2)}</span>
+                                <div className="flex flex-col text-left">
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1">Número de Celular *</label>
+                                    <input 
+                                        type="tel" 
+                                        required
+                                        value={telefono}
+                                        onChange={(e) => setTelefono(e.target.value)}
+                                        className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                        placeholder="Ej. 987654321"
+                                    />
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleMakeOrder}
-                                className="w-full mb-4 flex items-center justify-center gap-2 bg-[#95b721] hover:bg-[#e24052] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 text-lg"
-                            >
-                                Hacer Pedido
-                            </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex flex-col text-left">
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1">Ciudad *</label>
+                                    <select 
+                                        value={ciudad}
+                                        onChange={(e) => setCiudad(e.target.value)}
+                                        className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
+                                    >
+                                        <option value="Arequipa">Arequipa (Entrega Local)</option>
+                                        <option value="Otras Ciudades">Otras Ciudades (Envío Nacional)</option>
+                                    </select>
+                                </div>
+                                {ciudad === "Arequipa" && (
+                                    <div className="flex flex-col text-left">
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1">Distrito *</label>
+                                        <select 
+                                            value={distrito}
+                                            onChange={(e) => setDistrito(e.target.value)}
+                                            className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
+                                        >
+                                            <option value="Cayma">Cayma</option>
+                                            <option value="Yanahuara">Yanahuara</option>
+                                            <option value="Cercado">Cercado</option>
+                                            <option value="Jose Luis Bustamante y Rivero">José Luis Bustamante y Rivero</option>
+                                            <option value="Cerro Colorado">Cerro Colorado</option>
+                                            <option value="Paucarpata">Paucarpata</option>
+                                            <option value="Socabaya">Socabaya</option>
+                                            <option value="Miraflores">Miraflores</option>
+                                            <option value="Selva Alegre">Selva Alegre</option>
+                                            <option value="Jacobo Hunter">Jacobo Hunter</option>
+                                            <option value="Sachaca">Sachaca</option>
+                                            <option value="Tiabaya">Tiabaya</option>
+                                            <option value="Characato">Characato</option>
+                                            <option value="Sabandía">Sabandía</option>
+                                            <option value="Uchumayo">Uchumayo</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
 
-                             <button
-                                onClick={clearCart}
-                                className="w-full text-red-500 font-bold py-2 text-sm hover:underline"
+                            <div className="flex flex-col text-left">
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección de Entrega (Calle, Av., Nro) *</label>
+                                <input 
+                                    type="text" 
+                                    required
+                                    value={direccion}
+                                    onChange={(e) => setDireccion(e.target.value)}
+                                    className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                    placeholder="Ej. Calle Principal 123"
+                                />
+                            </div>
+
+                            <div className="flex flex-col text-left">
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1">Referencia adicional (Opcional)</label>
+                                <input 
+                                    type="text" 
+                                    value={referencia}
+                                    onChange={(e) => setReferencia(e.target.value)}
+                                    className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                    placeholder="Ej. Casa frente al parque, timbre de metal"
+                                />
+                            </div>
+
+                            {ciudad === "Arequipa" ? (
+                                <div className="space-y-2 text-left">
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Ubica tu casa en el mapa para el Courier *</label>
+                                    <p className="text-xs text-gray-400">Arrastra el marcador rojo o haz clic en tu ubicación exacta.</p>
+                                    <div 
+                                        id="map-picker" 
+                                        className="h-64 md:h-80 w-full rounded-2xl border-2 border-gray-250 shadow-inner z-10"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="bg-[#95b721]/5 border border-[#95b721]/20 p-6 rounded-2xl text-left space-y-2">
+                                    <h4 className="font-bold text-[#8ca91f] text-base">✈️ Envíos Nacionales</h4>
+                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                        Realizamos envíos a otras ciudades del Perú mediante **Shalom u Olva Courier** con cobro en destino. 
+                                        Al dar clic en continuar, te derivaremos con un mensaje pre-configurado de tu pedido a nuestro WhatsApp para coordinar el costo de envío.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="lg:col-span-1">
+                            <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-150 sticky top-4 space-y-6">
+                                <h3 className="text-2xl font-extrabold text-gray-900 mb-2">Total del Pedido</h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center text-gray-600">
+                                        <span>Productos</span>
+                                        <span className="font-bold">S/ {getTotalPrice().toFixed(2)}</span>
+                                    </div>
+                                    {ciudad === "Arequipa" && (
+                                        <div className="flex justify-between items-center text-gray-600">
+                                            <span>Envío (Variable)</span>
+                                            {estimating ? (
+                                                <Loader2 size={16} className="animate-spin text-[#95b721]" />
+                                            ) : (
+                                                <span className="font-bold">S/ {costoEnvio.toFixed(2)}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="h-px border-t-2 border-dashed border-gray-200 my-4" />
+                                    <div className="flex justify-between items-center text-2xl font-black text-gray-900">
+                                        <span>Total</span>
+                                        {estimating ? (
+                                            <Loader2 size={24} className="animate-spin text-[#95b721]" />
+                                        ) : (
+                                            <span>S/ {(parseFloat(getTotalPrice()) + (ciudad === "Arequipa" ? costoEnvio : 0)).toFixed(2)}</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={estimating}
+                                    className="w-full flex items-center justify-center gap-2 bg-[#95b721] hover:bg-[#e24052] disabled:opacity-50 text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 text-lg cursor-pointer"
+                                >
+                                    {estimating ? 'Calculando...' : ciudad === 'Arequipa' ? 'Proceder al Pago' : 'Coordinar Envío'} <ArrowRight size={18} />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="w-full flex items-center justify-center gap-2 text-gray-500 font-bold py-2 text-sm hover:underline cursor-pointer"
+                                >
+                                    <ArrowLeft size={14} /> Volver al Carrito
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                )}
+
+                {/* PASO 3: PAGO POR YAPE */}
+                {step === 3 && createdOrder && (
+                    <div className="max-w-2xl mx-auto bg-white p-6 md:p-10 rounded-3xl border border-gray-150 shadow-lg text-center space-y-6">
+                        <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-[#95b721]/15 text-[#95b721] mb-2 animate-bounce">
+                            <CreditCard size={28} />
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 leading-tight">Paga tu Pedido con Yape</h2>
+                        <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+                            Escanea el código QR de Yape de Abunga desde tu celular o yapea directamente al número indicado a continuación.
+                        </p>
+
+                        <div className="flex flex-col items-center justify-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200">
+                            {/* QR Dinámico del API */}
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=yape://pay?phone=973391928`}
+                                alt="Yape QR Abunga" 
+                                className="w-48 h-48 rounded-xl shadow-md border-2 border-white"
+                            />
+                            
+                            <div className="text-center space-y-1">
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Titular de Cuenta</p>
+                                <p className="font-extrabold text-gray-800 text-lg">Yoshua Josafat Núñez Huaccoto</p>
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-wide mt-2">Número de Celular Yape</p>
+                                <p className="font-black text-2xl text-[#95b721]">973 391 928</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-[#e24052]/5 border border-[#e24052]/20 p-5 rounded-2xl space-y-3">
+                            <h4 className="font-black text-[#e24052] text-lg">⚠️ ¡MUY IMPORTANTE!</h4>
+                            <p className="text-sm text-gray-700 leading-relaxed max-w-lg mx-auto">
+                                En la nota/mensaje de tu Yape, debes escribir exactamente el siguiente código de orden para que tu pago sea verificado:
+                            </p>
+                            <div className="inline-block bg-white border border-[#e24052]/30 px-6 py-3 rounded-xl shadow-xs">
+                                <span className="font-mono font-black text-2xl tracking-widest text-[#e24052] select-all">{createdOrder.codigo}</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Puedes seleccionarlo para copiarlo e ingresarlo en la nota de Yape.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {showSupportAlert && (
+                                <div className="bg-yellow-50 border border-yellow-250 p-4 rounded-2xl text-left text-sm text-yellow-800 animate-fade-in space-y-1">
+                                    <p className="font-bold">¿Está demorando la verificación?</p>
+                                    <p className="text-xs text-yellow-700 leading-relaxed">
+                                        Si ya realizaste la transferencia y aún no se valida en pantalla, no te preocupes. 
+                                        Puedes hacer clic en el botón de **Soporte** abajo para enviarnos tu comprobante directamente por WhatsApp y procesaremos tu orden de inmediato.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col items-center justify-center gap-2 py-4">
+                                <div className="flex items-center gap-3">
+                                    <Loader2 className="animate-spin text-[#95b721] h-6 w-6" />
+                                    <span className="font-extrabold text-gray-800 text-lg">Esperando tu Yape...</span>
+                                </div>
+                                <p className="text-sm text-gray-400">Verificaremos tu pago de forma automática en pocos segundos. No cierres esta pestaña.</p>
+                            </div>
+
+                            <div className="h-px bg-gray-200" />
+
+                            <div className="flex flex-col md:flex-row justify-center items-center gap-4">
+                                {showSupportAlert ? (
+                                    <a 
+                                        href={getWhatsAppSupportUrl(createdOrder)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full md:w-auto px-6 py-3.5 text-sm font-black text-white bg-[#e24052] hover:bg-[#d03546] rounded-xl transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        Contactar a Soporte por WhatsApp
+                                    </a>
+                                ) : (
+                                    <a 
+                                        href={getWhatsAppMessageUrl(createdOrder)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full md:w-auto px-6 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                                    >
+                                        Enviar comprobante por WhatsApp
+                                    </a>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        if (confirm("¿Estás seguro de cancelar esta orden pendiente?")) {
+                                            setPolling(false);
+                                            setStep(1);
+                                        }
+                                    }}
+                                    className="text-red-500 font-bold hover:underline text-sm cursor-pointer"
+                                >
+                                    Cancelar y volver al carrito
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* PASO 4: ÉXITO */}
+                {step === 4 && createdOrder && (
+                    <div className="max-w-xl mx-auto bg-white p-6 md:p-10 rounded-3xl border border-gray-150 shadow-xl text-center space-y-6 animate-fade-in">
+                        <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-green-50 text-green-500 mb-2">
+                            <CheckCircle size={48} className="animate-bounce" />
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 leading-tight">¡Pago Verificado con Éxito! 🎉</h2>
+                        <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
+                            Tu Yape ha sido validado correctamente. Tu pedido ya está siendo preparado en nuestra cocina en Arequipa y el motorizado courier llegará pronto a tu ubicación.
+                        </p>
+
+                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-left space-y-3">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-400 font-bold uppercase tracking-wide">Código de Orden</span>
+                                <span className="font-mono font-black text-gray-800 text-lg">{createdOrder.codigo}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-400 font-bold uppercase tracking-wide">Estado</span>
+                                <span className="inline-block bg-yellow-50 text-yellow-600 border border-yellow-200 text-xs font-black px-2.5 py-0.5 rounded-full">Preparando</span>
+                            </div>
+                            <div className="h-px bg-gray-200" />
+                            <div className="flex justify-between items-center font-black text-gray-900">
+                                <span>Total Pagado</span>
+                                <span className="text-xl text-[#95b721]">S/ {createdOrder.total}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <a 
+                                href={getWhatsAppMessageUrl(createdOrder)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full bg-[#95b721] hover:bg-[#e24052] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all duration-300 text-lg flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                Vaciar Pedido
+                                Notificar por WhatsApp (Opcional)
+                            </a>
+                            
+                            <button
+                                onClick={() => navigate("/profile")}
+                                className="w-full text-gray-600 font-extrabold py-2 text-sm hover:underline cursor-pointer"
+                            >
+                                Ir a mi Historial de Pedidos
                             </button>
                         </div>
                     </div>
-                </div>
+                )}
             </main>
             <Footer />
         </div>

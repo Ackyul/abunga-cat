@@ -1257,6 +1257,271 @@ app.post('/api/upload', verifySessionMiddleware, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  6. PEDIDOS Y AUTOMATIZACIÓN DE DELIVERY ENDPOINTS (/api/orders, /api/shipping)
+// ═══════════════════════════════════════════════════════════════
+
+// POST /api/shipping/estimate - Estimar costo de envío por distancia (Arequipa)
+app.post('/api/shipping/estimate', async (req, res) => {
+  const { lat, lng } = req.body || {};
+  if (lat === undefined || lng === undefined) {
+    return res.status(400).json({ error: 'Coordenadas lat y lng son requeridas.' });
+  }
+
+  try {
+    // Plaza de Yanahuara, Arequipa (ubicación base fija de Abunga)
+    const ABUNGA_LAT = -16.3988;
+    const ABUNGA_LNG = -71.5369;
+
+    // Fórmula de Haversine para calcular distancia en km
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = toRad(lat - ABUNGA_LAT);
+    const dLng = toRad(lng - ABUNGA_LNG);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(ABUNGA_LAT)) *
+        Math.cos(toRad(lat)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanceKm = R * c;
+
+    // Tarifa base: S/ 5.00. Costo por km: S/ 1.50. Tarifa máxima: S/ 20.00
+    let cost = 5.00 + distanceKm * 1.50;
+    if (cost > 20.00) cost = 20.00;
+    
+    // Redondear a 1 decimal
+    cost = Math.round(cost * 10) / 10;
+
+    return res.status(200).json({
+      cost,
+      distanceKm: Math.round(distanceKm * 100) / 100
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al calcular tarifa de envío.' });
+  }
+});
+
+// POST /api/orders - Crear nuevo pedido (Usuario autenticado)
+app.post('/api/orders', verifyUserSessionMiddleware, async (req, res) => {
+  const {
+    nombre_cliente,
+    telefono_cliente,
+    ciudad,
+    direccion,
+    latitud,
+    longitud,
+    referencia,
+    items,
+    subtotal,
+    costo_envio,
+    total
+  } = req.body || {};
+
+  if (!nombre_cliente || !telefono_cliente || !ciudad || !direccion || latitud === undefined || longitud === undefined || !items || subtotal === undefined || costo_envio === undefined || total === undefined) {
+    return res.status(400).json({ error: 'Todos los campos obligatorios del pedido son requeridos.' });
+  }
+
+  try {
+    // Generar un código único e impredecible de 6 dígitos
+    const codigo = 'AB-' + Math.floor(100000 + Math.random() * 900000);
+    const result = await sql`
+      INSERT INTO pedidos (
+        codigo,
+        usuario_id,
+        nombre_cliente,
+        telefono_cliente,
+        ciudad,
+        direccion,
+        latitud,
+        longitud,
+        referencia,
+        items,
+        subtotal,
+        costo_envio,
+        total,
+        estado
+      )
+      VALUES (
+        ${codigo},
+        ${req.userId},
+        ${nombre_cliente},
+        ${telefono_cliente},
+        ${ciudad},
+        ${direccion},
+        ${latitud},
+        ${longitud},
+        ${referencia || null},
+        ${JSON.stringify(items)},
+        ${subtotal},
+        ${costo_envio},
+        ${total},
+        'Pendiente de Pago'
+      )
+      RETURNING *
+    `;
+
+    // Limpiar el carrito de compras del usuario al hacer el pedido
+    await sql`
+      UPDATE usuarios
+      SET cart = '[]'::jsonb
+      WHERE id = ${req.userId}
+    `;
+
+    return res.status(201).json(result[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al registrar el pedido.' });
+  }
+});
+
+// GET /api/orders/my-orders - Ver historial de pedidos de cliente
+app.get('/api/orders/my-orders', verifyUserSessionMiddleware, async (req, res) => {
+  try {
+    const result = await sql`
+      SELECT * FROM pedidos
+      WHERE usuario_id = ${req.userId}
+      ORDER BY created_at DESC
+    `;
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener tus pedidos.' });
+  }
+});
+
+// GET /api/admin/orders - Ver todos los pedidos (Admin only)
+app.get('/api/admin/orders', verifySessionMiddleware, async (req, res) => {
+  try {
+    const result = await sql`
+      SELECT * FROM pedidos
+      ORDER BY created_at DESC
+    `;
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener listado de pedidos.' });
+  }
+});
+
+// PUT /api/admin/orders/:id/status - Actualizar estado de pedido (Admin only)
+app.put('/api/admin/orders/:id/status', verifySessionMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body || {};
+
+  if (!estado) {
+    return res.status(400).json({ error: 'El campo estado es requerido.' });
+  }
+
+  const validStatuses = ['Pendiente de Pago', 'Preparando', 'Enviado', 'Entregado', 'Cancelado'];
+  if (!validStatuses.includes(estado)) {
+    return res.status(400).json({ error: 'Estado de pedido no válido.' });
+  }
+
+  try {
+    const result = await sql`
+      UPDATE pedidos
+      SET estado = ${estado}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    return res.status(200).json(result[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al actualizar el estado del pedido.' });
+  }
+});
+
+// POST /api/payments/yape-webhook - Webhook de validación de pago de Yape automática
+app.post('/api/payments/yape-webhook', async (req, res) => {
+  const { monto, celular_emisor, mensaje_yape } = req.body || {};
+
+  console.log(`[YAPE WEBHOOK RECEIVED] Monto: S/ ${monto}, Celular: ${celular_emisor}, Mensaje: "${mensaje_yape}"`);
+
+  if (monto === undefined) {
+    return res.status(400).json({ error: 'El campo monto es requerido en la notificación.' });
+  }
+
+  try {
+    // 1. Buscar código de pedido tipo AB-XXXXXX en el comentario
+    let orderCode = '';
+    if (mensaje_yape && typeof mensaje_yape === 'string') {
+      const match = mensaje_yape.toUpperCase().match(/AB-\d{6}/);
+      if (match) {
+        orderCode = match[0];
+      }
+    }
+
+    let pedido = null;
+
+    if (orderCode) {
+      const result = await sql`
+        SELECT * FROM pedidos
+        WHERE codigo = ${orderCode} AND estado = 'Pendiente de Pago'
+      `;
+      if (result.length > 0) {
+        pedido = result[0];
+      }
+    }
+
+    // 2. Buscar por coincidencia de celular emisor y monto exacto
+    if (!pedido && celular_emisor) {
+      const cleanPhone = String(celular_emisor).replace(/^\+51/, '').trim();
+      const result = await sql`
+        SELECT * FROM pedidos
+        WHERE telefono_cliente LIKE ${'%' + cleanPhone} 
+          AND total = ${monto} 
+          AND estado = 'Pendiente de Pago'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      if (result.length > 0) {
+        pedido = result[0];
+      }
+    }
+
+    // 3. Fallback: buscar el pedido pendiente más reciente con ese monto exacto
+    if (!pedido) {
+      const result = await sql`
+        SELECT * FROM pedidos
+        WHERE total = ${monto} 
+          AND estado = 'Pendiente de Pago'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      if (result.length > 0) {
+        pedido = result[0];
+      }
+    }
+
+    if (!pedido) {
+      console.warn(`[YAPE WEBHOOK WARNING] No se pudo emparejar un pedido para el pago de S/ ${monto}.`);
+      return res.status(404).json({ error: 'No se encontró ningún pedido pendiente coincidente.' });
+    }
+
+    // 4. Actualizar el estado del pedido
+    const updated = await sql`
+      UPDATE pedidos
+      SET estado = 'Preparando'
+      WHERE id = ${pedido.id}
+      RETURNING *
+    `;
+
+    console.log(`[YAPE WEBHOOK SUCCESS] Pedido ${pedido.codigo} verificado y cambiado a 'Preparando'.`);
+    return res.status(200).json({ success: true, message: 'Pago verificado.', order: updated[0] });
+  } catch (err) {
+    console.error('[YAPE WEBHOOK ERROR]', err);
+    return res.status(500).json({ error: 'Error interno al procesar el webhook de Yape.' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  INICIALIZACIÓN DEL SERVIDOR
 // ═══════════════════════════════════════════════════════════════
 
