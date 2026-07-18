@@ -1475,10 +1475,82 @@ const getPedidosYaToken = async () => {
   return data.access_token;
 };
 
+// Función para enviar notificaciones automáticas al grupo de Telegram de tus trabajadores
+const sendTelegramNotification = async (message) => {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  
+  if (!token || !chatId) {
+    console.log('[TELEGRAM NOTIFIER MOCK] Notificación para trabajadores simulada (credenciales no configuradas):');
+    console.log(message);
+    return;
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'Markdown'
+      })
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      console.error('[TELEGRAM NOTIFIER ERROR] Respuesta de API:', errData);
+    } else {
+      console.log('[TELEGRAM NOTIFIER SUCCESS] Notificación enviada al grupo de taller.');
+    }
+  } catch (err) {
+    console.error('[TELEGRAM NOTIFIER ERROR] Falló el envío de red:', err.message);
+  }
+};
+
+// Función para enviar notificaciones automáticas al grupo de WhatsApp de tus trabajadores
+const sendWhatsAppNotification = async (message) => {
+  const instanceId = process.env.WHATSAPP_INSTANCE_ID;
+  const apiToken = process.env.WHATSAPP_API_TOKEN;
+  const chatId = process.env.WHATSAPP_CHAT_ID;
+  const baseUrl = process.env.WHATSAPP_API_BASE_URL || 'https://api.green-api.com';
+
+  if (!instanceId || !apiToken || !chatId) {
+    console.log('[WHATSAPP NOTIFIER MOCK] Notificación simulada para WhatsApp (credenciales de WhatsApp no configuradas):');
+    console.log(message);
+    return;
+  }
+
+  try {
+    const url = `${baseUrl}/waInstance${instanceId}/sendMessage/${apiToken}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chatId: chatId,
+        message: message
+      })
+    });
+    
+    if (!res.ok) {
+      const errData = await res.json();
+      console.error('[WHATSAPP NOTIFIER ERROR] Respuesta de API:', errData);
+    } else {
+      console.log('[WHATSAPP NOTIFIER SUCCESS] Notificación de Yape enviada a WhatsApp.');
+    }
+  } catch (err) {
+    console.error('[WHATSAPP NOTIFIER ERROR] Falló el envío de red:', err.message);
+  }
+};
+
 const dispatchPedidosYaOrder = async (order) => {
   const clientId = process.env.PEDIDOSYA_CLIENT_ID;
   const clientSecret = process.env.PEDIDOSYA_CLIENT_SECRET;
   
+  // Variables de recojo del taller/trabajadores
+  const recojoPhone = process.env.RECOJO_PHONE || '949237217';
+  const recojoDireccion = process.env.RECOJO_DIRECCION || 'Plaza de Yanahuara 120, Yanahuara, Arequipa';
+
   if (!clientId || !clientSecret) {
     console.log(`[PedidosYa API MOCK] Generando despacho automático simulado para el pedido #${order.codigo} (Credenciales no configuradas).`);
     return {
@@ -1496,13 +1568,13 @@ const dispatchPedidosYaOrder = async (order) => {
       reference: order.codigo,
       description: `Pedido de snacks Abunga #${order.codigo}`,
       notificationMail: 'contacto@abungasaborqueretumba.com',
-      notificationPhone: '949237217',
+      notificationPhone: recojoPhone,
       sender: {
-        name: 'Abunga Arequipa',
-        phone: '949237217',
+        name: 'Abunga Taller',
+        phone: recojoPhone, // El conductor llamará a este número del taller
         email: 'contacto@abungasaborqueretumba.com',
         address: {
-          addressString: 'Plaza de Yanahuara 120, Yanahuara, Arequipa',
+          addressString: recojoDireccion,
           latitude: -16.3988,
           longitude: -71.5369
         }
@@ -1646,6 +1718,37 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
       }
     } catch (e) {
       console.error("[YAPE WEBHOOK] Fallo al despachar PedidosYa:", e);
+    }
+    // 6. Enviar notificación al grupo de trabajadores
+    try {
+      const itemsText = (Array.isArray(finalOrder.items) ? finalOrder.items : [])
+        .map(item => `*• ${item.name} (${item.selectedWeight}) x${item.quantity}*`)
+        .join('\n');
+      
+      const trackingInfo = finalOrder.tracking_url 
+        ? `\n🛵 *Delivery despachado (PedidosYa):* [Seguir Envío en Vivo](${finalOrder.tracking_url})` 
+        : '\n⚠️ *Despacho de Delivery Fallido.* Coordinar envío manual.';
+
+      const notificationMsg = 
+`🚨 *¡NUEVO PEDIDO PAGADO Y LISTO!* 🚨
+*Código:* #${finalOrder.codigo}
+
+*Productos:*
+${itemsText}
+
+*Cliente:* ${finalOrder.nombre_cliente} (${finalOrder.telefono_cliente})
+*Dirección:* ${finalOrder.direccion}
+${finalOrder.referencia ? `*Referencia:* ${finalOrder.referencia}\n` : ''}
+*Total Pagado:* S/ ${parseFloat(finalOrder.total).toFixed(2)} (Envío: S/ ${parseFloat(finalOrder.costo_envio).toFixed(2)})
+${trackingInfo}
+
+_El repartidor llamará al teléfono del taller (${process.env.RECOJO_PHONE || '949237217'}) al llegar al local._`;
+
+      // Enviar notificaciones a los canales configurados (Telegram y/o WhatsApp)
+      await sendTelegramNotification(notificationMsg);
+      await sendWhatsAppNotification(notificationMsg);
+    } catch (e) {
+      console.error("[YAPE WEBHOOK] Fallo al enviar notificaciones de mensajería:", e);
     }
 
     console.log(`[YAPE WEBHOOK SUCCESS] Pedido ${pedido.codigo} verificado y cambiado a 'Preparando'.`);
