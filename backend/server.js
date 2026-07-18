@@ -576,7 +576,7 @@ app.get('/api/users/session', async (req, res) => {
     const session = verifyToken(token, jwtSecret);
     if (session && session.id) {
       try {
-        const users = await sql`SELECT id, name, email, phone, google_email, cart, created_at FROM usuarios WHERE id = ${session.id}`;
+        const users = await sql`SELECT id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud FROM usuarios WHERE id = ${session.id}`;
         if (users.length > 0) {
           return res.status(200).json({ authenticated: true, user: users[0] });
         }
@@ -853,7 +853,7 @@ app.get('/api/users/callback', async (req, res) => {
 
     // Flujo normal de login
     let users = await sql`
-      SELECT id, name, email, phone, google_email, cart, created_at 
+      SELECT id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
       FROM usuarios 
       WHERE email = ${cleanEmail} OR google_email = ${cleanEmail}
     `;
@@ -931,13 +931,20 @@ app.post('/api/users/change-password', verifyUserSessionMiddleware, async (req, 
 
 // POST /api/users/update-profile
 app.post('/api/users/update-profile', verifyUserSessionMiddleware, async (req, res) => {
-  const { name, phone } = req.body || {};
+  const { name, phone, ciudad, region, distrito, direccion, referencia, latitud, longitud } = req.body || {};
   if (!name) {
     return res.status(400).json({ error: 'El nombre es requerido.' });
   }
 
   const cleanName = sanitizeString(name);
   const cleanPhone = phone ? sanitizeString(phone) : null;
+  const cleanCiudad = ciudad ? sanitizeString(ciudad) : null;
+  const cleanRegion = region ? sanitizeString(region) : null;
+  const cleanDistrito = distrito ? sanitizeString(distrito) : null;
+  const cleanDireccion = direccion ? sanitizeString(direccion) : null;
+  const cleanReferencia = referencia ? sanitizeString(referencia) : null;
+  const numLat = latitud !== undefined && latitud !== null ? parseFloat(latitud) : null;
+  const numLng = longitud !== undefined && longitud !== null ? parseFloat(longitud) : null;
 
   if (cleanName.length < 2 || cleanName.length > MAX_NAME_LENGTH) {
     return res.status(400).json({ error: `El nombre debe tener entre 2 y ${MAX_NAME_LENGTH} caracteres.` });
@@ -946,9 +953,17 @@ app.post('/api/users/update-profile', verifyUserSessionMiddleware, async (req, r
   try {
     const result = await sql`
       UPDATE usuarios
-      SET name = ${cleanName}, phone = ${cleanPhone}
+      SET name = ${cleanName}, 
+          phone = ${cleanPhone},
+          ciudad = ${cleanCiudad},
+          region = ${cleanRegion},
+          distrito = ${cleanDistrito},
+          direccion = ${cleanDireccion},
+          referencia = ${cleanReferencia},
+          latitud = ${numLat},
+          longitud = ${numLng}
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, created_at
+      RETURNING id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
     `;
     if (result.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });

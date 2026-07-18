@@ -37,6 +37,12 @@ const Cart = () => {
         if (user) {
             setNombre(user.name || "");
             setTelefono(user.phone || "");
+            if (user.ciudad) setCiudad(user.ciudad);
+            if (user.distrito) setDistrito(user.distrito);
+            if (user.direccion) setDireccion(user.direccion);
+            if (user.referencia) setReferencia(user.referencia);
+            if (user.latitud) setLat(Number(user.latitud));
+            if (user.longitud) setLng(Number(user.longitud));
         }
     }, [user]);
 

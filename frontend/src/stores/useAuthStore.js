@@ -105,13 +105,13 @@ const useAuthStore = create((set, get) => ({
   },
 
   // Actualizar datos del perfil
-  updateProfile: async (name, phone) => {
+  updateProfile: async (name, phone, ciudad = null, region = null, distrito = null, direccion = null, referencia = null, latitud = null, longitud = null) => {
     set({ loading: true, error: null });
     try {
       const response = await fetch('/api/users/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, ciudad, region, distrito, direccion, referencia, latitud, longitud }),
       });
 
       const data = await response.json();

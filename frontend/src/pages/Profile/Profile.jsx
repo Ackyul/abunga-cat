@@ -27,7 +27,17 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editRegion, setEditRegion] = useState("Arequipa");
+  const [editCiudad, setEditCiudad] = useState("Arequipa");
+  const [editDistrito, setEditDistrito] = useState("Cayma");
+  const [editDireccion, setEditDireccion] = useState("");
+  const [editReferencia, setEditReferencia] = useState("");
+  const [editLat, setEditLat] = useState(-16.3988);
+  const [editLng, setEditLng] = useState(-71.5369);
   const [editLoading, setEditLoading] = useState(false);
+
+  const editMapRef = useRef(null);
+  const editMarkerRef = useRef(null);
 
   // Estados de Cambio de Contraseña
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -43,8 +53,77 @@ const Profile = () => {
     } else if (user) {
       setEditName(user.name || "");
       setEditPhone(user.phone || "");
+      setEditRegion(user.region || "Arequipa");
+      setEditCiudad(user.ciudad || "Arequipa");
+      setEditDistrito(user.distrito || "Cayma");
+      setEditDireccion(user.direccion || "");
+      setEditReferencia(user.referencia || "");
+      setEditLat(Number(user.latitud) || -16.3988);
+      setEditLng(Number(user.longitud) || -71.5369);
     }
   }, [user, loading, navigate]);
+
+  // Carga de Leaflet en el perfil si está editando y selecciona Arequipa
+  useEffect(() => {
+    if (!isEditing || editCiudad !== "Arequipa") return;
+
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    const initEditMap = () => {
+      if (!window.L) return;
+      const container = document.getElementById("profile-map-picker");
+      if (!container) return;
+      if (container._leaflet_id) return;
+
+      const map = window.L.map("profile-map-picker").setView([editLat, editLng], 14);
+      editMapRef.current = map;
+
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      const defaultIcon = window.L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      const marker = window.L.marker([editLat, editLng], { draggable: true, icon: defaultIcon }).addTo(map);
+      editMarkerRef.current = marker;
+
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        setEditLat(pos.lat);
+        setEditLng(pos.lng);
+      });
+
+      map.on("click", (e) => {
+        marker.setLatLng(e.latlng);
+        setEditLat(e.latlng.lat);
+        setEditLng(e.latlng.lng);
+      });
+    };
+
+    if (!window.L) {
+      const script = document.createElement("script");
+      script.id = "leaflet-js";
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initEditMap;
+      document.body.appendChild(script);
+    } else {
+      const t = setTimeout(initEditMap, 150);
+      return () => clearTimeout(t);
+    }
+  }, [isEditing, editCiudad]);
 
   // Obtener pedidos del cliente
   useEffect(() => {
@@ -91,7 +170,17 @@ const Profile = () => {
 
     setEditLoading(true);
     try {
-      await updateProfile(editName, editPhone || null);
+      await updateProfile(
+        editName,
+        editPhone || null,
+        editCiudad || null,
+        editRegion || null,
+        editDistrito || null,
+        editDireccion || null,
+        editReferencia || null,
+        editLat,
+        editLng
+      );
       toast.success("Perfil actualizado correctamente.");
       setIsEditing(false);
     } catch (err) {
@@ -452,7 +541,7 @@ const Profile = () => {
                   </div>
 
                   {!isEditing ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                       <div>
                         <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Nombre Completo</span>
                         <span className="text-gray-900 text-sm font-medium">{user.name}</span>
@@ -465,12 +554,36 @@ const Profile = () => {
                         <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Correo Electrónico</span>
                         <span className="text-gray-900 text-sm font-medium">{user.email}</span>
                       </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Región</span>
+                        <span className="text-gray-900 text-sm font-medium">{user.region || "No registrada"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ciudad</span>
+                        <span className="text-gray-900 text-sm font-medium">{user.ciudad || "No registrada"}</span>
+                      </div>
+                      {user.ciudad === "Arequipa" && (
+                        <div>
+                          <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Distrito (Solo Arequipa)</span>
+                          <span className="text-gray-900 text-sm font-medium">{user.distrito || "No registrado"}</span>
+                        </div>
+                      )}
+                      <div className="md:col-span-2">
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Dirección Predeterminada</span>
+                        <span className="text-gray-900 text-sm font-medium">{user.direccion || "No registrada"}</span>
+                      </div>
+                      {user.referencia && (
+                        <div className="md:col-span-2">
+                          <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Referencia</span>
+                          <span className="text-gray-900 text-sm font-medium">{user.referencia}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <form onSubmit={handleUpdateProfile} className="space-y-4 text-left">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="text-left">
-                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Nombre</label>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Nombre *</label>
                           <input
                             type="text"
                             required
@@ -479,7 +592,7 @@ const Profile = () => {
                             className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
                           />
                         </div>
-                        <div className="text-left">
+                        <div>
                           <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Teléfono</label>
                           <input
                             type="tel"
@@ -491,6 +604,90 @@ const Profile = () => {
                         </div>
                       </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Región</label>
+                          <input
+                            type="text"
+                            value={editRegion}
+                            onChange={(e) => setEditRegion(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
+                            placeholder="Ej: Arequipa"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Ciudad</label>
+                          <select 
+                            value={editCiudad}
+                            onChange={(e) => setEditCiudad(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                          >
+                            <option value="Arequipa">Arequipa (Entrega Local)</option>
+                            <option value="Otras Ciudades">Otras Ciudades (Envío Nacional)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {editCiudad === "Arequipa" && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Distrito</label>
+                          <select 
+                            value={editDistrito}
+                            onChange={(e) => setEditDistrito(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                          >
+                            <option value="Cayma">Cayma</option>
+                            <option value="Yanahuara">Yanahuara</option>
+                            <option value="Cercado">Cercado</option>
+                            <option value="Jose Luis Bustamante y Rivero">José Luis Bustamante y Rivero</option>
+                            <option value="Cerro Colorado">Cerro Colorado</option>
+                            <option value="Paucarpata">Paucarpata</option>
+                            <option value="Socabaya">Socabaya</option>
+                            <option value="Miraflores">Miraflores</option>
+                            <option value="Selva Alegre">Selva Alegre</option>
+                            <option value="Jacobo Hunter">Jacobo Hunter</option>
+                            <option value="Sachaca">Sachaca</option>
+                            <option value="Tiabaya">Tiabaya</option>
+                            <option value="Characato">Characato</option>
+                            <option value="Sabandía">Sabandía</option>
+                            <option value="Uchumayo">Uchumayo</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Dirección de Entrega</label>
+                        <input
+                          type="text"
+                          value={editDireccion}
+                          onChange={(e) => setEditDireccion(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
+                          placeholder="Ej: Calle Principal 123"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Referencia de Entrega</label>
+                        <input
+                          type="text"
+                          value={editReferencia}
+                          onChange={(e) => setEditReferencia(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#95b721] bg-gray-50/50"
+                          placeholder="Ej: Portón verde, timbre metálico"
+                        />
+                      </div>
+
+                      {editCiudad === "Arequipa" && (
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">Ubica tu casa predeterminada en el mapa</label>
+                          <p className="text-[10px] text-gray-400">Esto guardará tu ubicación para que no tengas que buscarla en el mapa cada vez que compres.</p>
+                          <div 
+                            id="profile-map-picker" 
+                            className="h-48 w-full rounded-2xl border border-gray-250 shadow-inner z-10"
+                          />
+                        </div>
+                      )}
+
                       <div className="flex justify-end gap-3 pt-2">
                         <button
                           type="button"
@@ -498,6 +695,13 @@ const Profile = () => {
                             setIsEditing(false);
                             setEditName(user.name || "");
                             setEditPhone(user.phone || "");
+                            setEditRegion(user.region || "Arequipa");
+                            setEditCiudad(user.ciudad || "Arequipa");
+                            setEditDistrito(user.distrito || "Cayma");
+                            setEditDireccion(user.direccion || "");
+                            setEditReferencia(user.referencia || "");
+                            setEditLat(Number(user.latitud) || -16.3988);
+                            setEditLng(Number(user.longitud) || -71.5369);
                           }}
                           className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-semibold text-sm transition cursor-pointer"
                         >
