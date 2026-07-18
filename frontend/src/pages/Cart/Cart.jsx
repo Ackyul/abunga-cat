@@ -21,13 +21,14 @@ const Cart = () => {
     const [direccion, setDireccion] = useState("");
     const [referencia, setReferencia] = useState("");
     
-    // Coordenadas iniciales (Plaza de Yanahuara, Arequipa)
-    const [lat, setLat] = useState(-16.3988);
-    const [lng, setLng] = useState(-71.5369);
+    // Coordenadas iniciales (Av. Dolores con Calle Los Pinos, Arequipa)
+    const [lat, setLat] = useState(-16.4253);
+    const [lng, setLng] = useState(-71.5303);
     const [costoEnvio, setCostoEnvio] = useState(0);
     const [estimating, setEstimating] = useState(false);
     const [createdOrder, setCreatedOrder] = useState(null);
     const [polling, setPolling] = useState(false);
+    const [tipoEnvio, setTipoEnvio] = useState("delivery"); // "delivery" o "pickup"
 
     const mapRef = useRef(null);
     const markerRef = useRef(null);
@@ -124,7 +125,7 @@ const Cart = () => {
             const t = setTimeout(initLeafletMap, 150);
             return () => clearTimeout(t);
         }
-    }, [step, ciudad]);
+    }, [step, ciudad, tipoEnvio]);
 
     // Polling para chequear validación de Yape automática
     useEffect(() => {
@@ -186,7 +187,7 @@ const Cart = () => {
     // Crear pedido en la base de datos (Step 2 -> Step 3)
     const handleCreateOrder = async (e) => {
         e.preventDefault();
-        if (!nombre || !telefono || !direccion) {
+        if (!nombre || !telefono || (tipoEnvio === "delivery" && !direccion)) {
             alert("Por favor llena todos los campos obligatorios.");
             return;
         }
@@ -202,14 +203,14 @@ const Cart = () => {
                 nombre_cliente: nombre,
                 telefono_cliente: telefono,
                 ciudad: ciudad,
-                direccion: `${direccion} (${distrito})`,
-                latitud: lat,
-                longitud: lng,
-                referencia: referencia || "",
+                direccion: tipoEnvio === "pickup" ? "RECOJO EN TALLER (Av. Dolores con Calle Los Pinos, JLByR)" : `${direccion} (${distrito})`,
+                latitud: tipoEnvio === "pickup" ? -16.4253 : lat,
+                longitud: tipoEnvio === "pickup" ? -71.5303 : lng,
+                referencia: tipoEnvio === "pickup" ? "Recojo en taller físico (portón de garage entre 2 tiendas)" : (referencia || ""),
                 items: cart,
                 subtotal: parseFloat(getTotalPrice()),
-                costo_envio: parseFloat(costoEnvio),
-                total: parseFloat(getTotalPrice()) + parseFloat(costoEnvio)
+                costo_envio: tipoEnvio === "pickup" ? 0 : parseFloat(costoEnvio),
+                total: parseFloat(getTotalPrice()) + (tipoEnvio === "pickup" ? 0 : parseFloat(costoEnvio))
             };
 
             const res = await fetch("/api/orders", {
@@ -221,7 +222,7 @@ const Cart = () => {
             if (res.ok) {
                 setCreatedOrder(data);
                 setStep(3);
-                setPolling(true);
+                setPolling(false); // Desactivar polling automático según preferencia manual del negocio
             } else {
                 alert("Error al registrar pedido: " + (data.error || "Intente nuevamente."));
             }
@@ -249,7 +250,7 @@ const Cart = () => {
         window.location.href = `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
     };
 
-    // Estado para mostrar ayuda de soporte si el yape demora en validarse
+    // Estado para mostrar ayuda de soporte si el yape de WhatsApp se demora
     const [showSupportAlert, setShowSupportAlert] = useState(false);
 
     // Timer de alerta de soporte en Paso 3
@@ -260,26 +261,41 @@ const Cart = () => {
         }
         const timer = setTimeout(() => {
             setShowSupportAlert(true);
-        }, 20000); // 20 segundos de espera activa
+        }, 15000); // Mostrar ayuda de soporte rápido
         return () => clearTimeout(timer);
     }, [step]);
 
     // URL de WhatsApp de soporte técnico
     const getWhatsAppSupportUrl = (order) => {
         if (!order) return "";
-        let message = `¡Hola Abunga! 🌟 Tengo una consulta sobre el pago automático de mi Pedido *#${order.codigo}*.\n\n`;
-        message += `Ya yapeé un monto de S/ ${order.total} pero aún figura en espera. ¿Me podrían ayudar a verificarlo manualmente?`;
+        let message = `¡Hola Abunga! 🌟 Tengo una consulta sobre mi Pedido *#${order.codigo}*.\n\n`;
+        message += `Ya yapeé un monto de S/ ${order.total} y quisiera coordinar su entrega directamente.`;
         return `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
     };
 
     // URL de WhatsApp de confirmación manual/éxito
     const getWhatsAppMessageUrl = (order) => {
         if (!order) return "";
-        let message = `¡Hola Abunga! 🌟 Acabo de realizar mi pedido *#${order.codigo}* por Yape.\n\n`;
-        message += `*Cliente:* ${order.nombre_cliente}\n`;
-        message += `*Monto Total:* S/ ${order.total}\n`;
-        message += `*Dirección:* ${order.direccion}\n\n`;
-        message += `El pago ya fue verificado automáticamente en la web. Quedo atento a la preparación. ¡Gracias!`;
+        let message = `¡Hola Abunga! 🌟 Acabo de yapear para mi pedido *#${order.codigo}*:\n\n`;
+        
+        // Agregar productos
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                message += `• *${item.name} (${item.selectedWeight})* x${item.quantity}\n`;
+            });
+            message += `\n`;
+        }
+        
+        message += `👤 *Cliente:* ${order.nombre_cliente} (${order.telefono_cliente})\n`;
+        message += `📍 *Ubicación:* ${order.direccion}\n`;
+        if (order.referencia) message += `🔍 *Referencia:* ${order.referencia}\n`;
+        
+        message += `\n💰 *Total a pagar por Yape (Snacks):* S/ ${parseFloat(order.subtotal || 0).toFixed(2)}\n`;
+        if (order.costo_envio > 0) {
+            message += `🛵 *Envío inDrive (Pagar en destino):* S/ ${parseFloat(order.costo_envio).toFixed(2)}\n`;
+        }
+        
+        message += `\nAdjunto aquí mi comprobante de Yape para la validación manual. ¡Gracias!`;
         return `https://wa.me/51949237217?text=${encodeURIComponent(message)}`;
     };
 
@@ -474,6 +490,40 @@ const Cart = () => {
                                 <MapPin className="text-[#95b721]" /> Datos de Entrega
                             </h2>
 
+                            {/* Selector de Tipo de Envío (Solo si es Arequipa) */}
+                            {ciudad === "Arequipa" && (
+                                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setTipoEnvio("delivery");
+                                            estimateShipping(lat, lng);
+                                        }}
+                                        className={`py-3 px-4 rounded-xl font-extrabold text-sm transition-all cursor-pointer ${
+                                            tipoEnvio === "delivery"
+                                                ? "bg-[#95b721] text-white shadow-sm"
+                                                : "text-gray-600 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        🛵 Envío a Domicilio
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setTipoEnvio("pickup");
+                                            setCostoEnvio(0);
+                                        }}
+                                        className={`py-3 px-4 rounded-xl font-extrabold text-sm transition-all cursor-pointer ${
+                                            tipoEnvio === "pickup"
+                                                ? "bg-[#95b721] text-white shadow-sm"
+                                                : "text-gray-600 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        🏪 Recoger en Taller (Gratis)
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="flex flex-col text-left">
                                     <label className="text-xs font-bold text-gray-400 uppercase mb-1">Nombre de quien Recibe *</label>
@@ -499,85 +549,103 @@ const Cart = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col text-left">
-                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1">Ciudad *</label>
-                                    <select 
-                                        value={ciudad}
-                                        onChange={(e) => setCiudad(e.target.value)}
-                                        className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
-                                    >
-                                        <option value="Arequipa">Arequipa (Entrega Local)</option>
-                                        <option value="Otras Ciudades">Otras Ciudades (Envío Nacional)</option>
-                                    </select>
-                                </div>
-                                {ciudad === "Arequipa" && (
-                                    <div className="flex flex-col text-left">
-                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1">Distrito *</label>
-                                        <select 
-                                            value={distrito}
-                                            onChange={(e) => setDistrito(e.target.value)}
-                                            className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
-                                        >
-                                            <option value="Cayma">Cayma</option>
-                                            <option value="Yanahuara">Yanahuara</option>
-                                            <option value="Cercado">Cercado</option>
-                                            <option value="Jose Luis Bustamante y Rivero">José Luis Bustamante y Rivero</option>
-                                            <option value="Cerro Colorado">Cerro Colorado</option>
-                                            <option value="Paucarpata">Paucarpata</option>
-                                            <option value="Socabaya">Socabaya</option>
-                                            <option value="Miraflores">Miraflores</option>
-                                            <option value="Selva Alegre">Selva Alegre</option>
-                                            <option value="Jacobo Hunter">Jacobo Hunter</option>
-                                            <option value="Sachaca">Sachaca</option>
-                                            <option value="Tiabaya">Tiabaya</option>
-                                            <option value="Characato">Characato</option>
-                                            <option value="Sabandía">Sabandía</option>
-                                            <option value="Uchumayo">Uchumayo</option>
-                                        </select>
+                            {/* Mostrar campos de dirección y mapa si es para envío */}
+                            {tipoEnvio === "delivery" || ciudad !== "Arequipa" ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex flex-col text-left">
+                                            <label className="text-xs font-bold text-gray-400 uppercase mb-1">Ciudad *</label>
+                                            <select 
+                                                value={ciudad}
+                                                onChange={(e) => setCiudad(e.target.value)}
+                                                className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
+                                            >
+                                                <option value="Arequipa">Arequipa (Entrega Local)</option>
+                                                <option value="Otras Ciudades">Otras Ciudades (Envío Nacional)</option>
+                                            </select>
+                                        </div>
+                                        {ciudad === "Arequipa" && (
+                                            <div className="flex flex-col text-left">
+                                                <label className="text-xs font-bold text-gray-400 uppercase mb-1">Distrito *</label>
+                                                <select 
+                                                    value={distrito}
+                                                    onChange={(e) => setDistrito(e.target.value)}
+                                                    className="border border-gray-250 rounded-2xl px-4 py-3 text-sm bg-white focus:outline-[#95b721]"
+                                                >
+                                                    <option value="Cayma">Cayma</option>
+                                                    <option value="Yanahuara">Yanahuara</option>
+                                                    <option value="Cercado">Cercado</option>
+                                                    <option value="Jose Luis Bustamante y Rivero">José Luis Bustamante y Rivero</option>
+                                                    <option value="Cerro Colorado">Cerro Colorado</option>
+                                                    <option value="Paucarpata">Paucarpata</option>
+                                                    <option value="Socabaya">Socabaya</option>
+                                                    <option value="Miraflores">Miraflores</option>
+                                                    <option value="Selva Alegre">Selva Alegre</option>
+                                                    <option value="Jacobo Hunter">Jacobo Hunter</option>
+                                                    <option value="Sachaca">Sachaca</option>
+                                                    <option value="Tiabaya">Tiabaya</option>
+                                                    <option value="Characato">Characato</option>
+                                                    <option value="Sabandía">Sabandía</option>
+                                                    <option value="Uchumayo">Uchumayo</option>
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="flex flex-col text-left">
-                                <label className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección de Entrega (Calle, Av., Nro) *</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    value={direccion}
-                                    onChange={(e) => setDireccion(e.target.value)}
-                                    className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
-                                    placeholder="Ej. Calle Principal 123"
-                                />
-                            </div>
+                                    <div className="flex flex-col text-left">
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección de Entrega (Calle, Av., Nro) *</label>
+                                        <input 
+                                            type="text" 
+                                            required={tipoEnvio === "delivery"}
+                                            value={direccion}
+                                            onChange={(e) => setDireccion(e.target.value)}
+                                            className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                            placeholder="Ej. Calle Principal 123"
+                                        />
+                                    </div>
 
-                            <div className="flex flex-col text-left">
-                                <label className="text-xs font-bold text-gray-400 uppercase mb-1">Referencia adicional (Opcional)</label>
-                                <input 
-                                    type="text" 
-                                    value={referencia}
-                                    onChange={(e) => setReferencia(e.target.value)}
-                                    className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
-                                    placeholder="Ej. Casa frente al parque, timbre de metal"
-                                />
-                            </div>
+                                    <div className="flex flex-col text-left">
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1">Referencia adicional (Opcional)</label>
+                                        <input 
+                                            type="text" 
+                                            value={referencia}
+                                            onChange={(e) => setReferencia(e.target.value)}
+                                            className="border border-gray-250 rounded-2xl px-4 py-3 text-sm focus:outline-[#95b721]" 
+                                            placeholder="Ej. Casa frente al parque, timbre de metal"
+                                        />
+                                    </div>
 
-                            {ciudad === "Arequipa" ? (
-                                <div className="space-y-2 text-left">
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Ubica tu casa en el mapa para el Courier *</label>
-                                    <p className="text-xs text-gray-400">Arrastra el marcador rojo o haz clic en tu ubicación exacta.</p>
-                                    <div 
-                                        id="map-picker" 
-                                        className="h-64 md:h-80 w-full rounded-2xl border-2 border-gray-250 shadow-inner z-10"
-                                    />
+                                    {ciudad === "Arequipa" ? (
+                                        <div className="space-y-2 text-left">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">Ubica tu casa en el mapa para el Courier *</label>
+                                            <p className="text-xs text-gray-400">Arrastra el marcador rojo o haz clic en tu ubicación exacta.</p>
+                                            <div 
+                                                id="map-picker" 
+                                                className="h-64 md:h-80 w-full rounded-2xl border-2 border-gray-250 shadow-inner z-10"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="bg-[#95b721]/5 border border-[#95b721]/20 p-6 rounded-2xl text-left space-y-2">
+                                            <h4 className="font-bold text-[#8ca91f] text-base">✈️ Envíos Nacionales</h4>
+                                            <p className="text-sm text-gray-600 leading-relaxed">
+                                                Realizamos envíos a otras ciudades del Perú mediante **Shalom u Olva Courier** con cobro en destino. 
+                                                Al dar clic en continuar, te derivaremos con un mensaje pre-configurado de tu pedido a nuestro WhatsApp para coordinar el costo de envío.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="bg-[#95b721]/5 border border-[#95b721]/20 p-6 rounded-2xl text-left space-y-2">
-                                    <h4 className="font-bold text-[#8ca91f] text-base">✈️ Envíos Nacionales</h4>
-                                    <p className="text-sm text-gray-600 leading-relaxed">
-                                        Realizamos envíos a otras ciudades del Perú mediante **Shalom u Olva Courier** con cobro en destino. 
-                                        Al dar clic en continuar, te derivaremos con un mensaje pre-configurado de tu pedido a nuestro WhatsApp para coordinar el costo de envío.
-                                    </p>
+                                /* Mostrar detalles del taller si seleccionan Recoger en Tienda */
+                                <div className="bg-[#95b721]/5 border border-[#95b721]/20 p-6 rounded-2xl text-left space-y-4">
+                                    <h4 className="font-bold text-[#8ca91f] text-base flex items-center gap-1.5">
+                                        🏪 Datos de Recojo en Taller (José Luis Bustamante y Rivero)
+                                    </h4>
+                                    <div className="text-sm text-gray-600 space-y-3">
+                                        <p>📍 <strong>Dirección:</strong> Av. Dolores con Calle Los Pinos (Esquina entre 2 tiendas, portón de garage).</p>
+                                        <p>🕒 <strong>Horario de atención:</strong> Lunes a Sábado de 10:00 AM a 8:00 PM.</p>
+                                        <div className="h-px bg-[#95b721]/20 my-2" />
+                                        <p className="text-xs text-gray-500 italic">Te enviaremos un mensaje automático por WhatsApp cuando tu pedido esté empacado y listo para que pases a recogerlo.</p>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -593,23 +661,26 @@ const Cart = () => {
                                     </div>
                                     {ciudad === "Arequipa" && (
                                         <div className="flex justify-between items-center text-gray-600">
-                                            <span>Envío (Variable)</span>
+                                            <span>Envío Estimado (inDrive)</span>
                                             {estimating ? (
                                                 <Loader2 size={16} className="animate-spin text-[#95b721]" />
                                             ) : (
-                                                <span className="font-bold">S/ {costoEnvio.toFixed(2)}</span>
+                                                <span className="font-bold text-gray-500">
+                                                    {tipoEnvio === "pickup" ? "Gratis" : `S/ ${costoEnvio.toFixed(2)}`}
+                                                </span>
                                             )}
                                         </div>
                                     )}
                                     <div className="h-px border-t-2 border-dashed border-gray-200 my-4" />
                                     <div className="flex justify-between items-center text-2xl font-black text-gray-900">
-                                        <span>Total</span>
-                                        {estimating ? (
-                                            <Loader2 size={24} className="animate-spin text-[#95b721]" />
-                                        ) : (
-                                            <span>S/ {(parseFloat(getTotalPrice()) + (ciudad === "Arequipa" ? costoEnvio : 0)).toFixed(2)}</span>
-                                        )}
+                                        <span>Total a Yapear</span>
+                                        <span>S/ {getTotalPrice().toFixed(2)}</span>
                                     </div>
+                                    {tipoEnvio === "delivery" && ciudad === "Arequipa" && (
+                                        <p className="text-[11px] text-gray-500 bg-yellow-50 border border-yellow-250/50 p-3 rounded-xl leading-relaxed text-left">
+                                            ⚠️ <strong>Nota de Envío:</strong> Los <strong>S/ {costoEnvio.toFixed(2)}</strong> de delivery se pagan directamente al motorizado de inDrive al recibir el pedido. Por Yape solo estás pagando tus productos.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <button
@@ -639,6 +710,22 @@ const Cart = () => {
                             <CreditCard size={28} />
                         </div>
                         <h2 className="text-3xl font-black text-gray-900 leading-tight">Paga tu Pedido con Yape</h2>
+                        
+                        {/* Indicador de Próximamente / Manual */}
+                        <div className="bg-[#95b721]/5 border border-[#95b721]/20 p-4 rounded-2xl flex items-center justify-between text-left text-sm gap-4">
+                            <div>
+                                <p className="font-extrabold text-[#8ca91f] flex items-center gap-1.5">
+                                    ⚡ Verificación Automática (Yape Pay)
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Estamos finalizando las pruebas del sistema de cobros automatizados. Por ahora, confirma tu compra enviando la captura de tu Yape por WhatsApp.
+                                </p>
+                            </div>
+                            <span className="shrink-0 bg-[#95b721] text-white font-black text-[9px] uppercase tracking-wider px-2 py-1 rounded-md">
+                                Próximamente
+                            </span>
+                        </div>
+
                         <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
                             Escanea el código QR de Yape de Abunga desde tu celular o yapea directamente al número indicado a continuación.
                         </p>
@@ -673,26 +760,34 @@ const Cart = () => {
                         <div className="space-y-4">
                             {showSupportAlert && (
                                 <div className="bg-yellow-50 border border-yellow-250 p-4 rounded-2xl text-left text-sm text-yellow-800 animate-fade-in space-y-1">
-                                    <p className="font-bold">¿Está demorando la verificación?</p>
+                                    <p className="font-bold">¿Tienes dudas con tu pago?</p>
                                     <p className="text-xs text-yellow-700 leading-relaxed">
-                                        Si ya realizaste la transferencia y aún no se valida en pantalla, no te preocupes. 
-                                        Puedes hacer clic en el botón de **Soporte** abajo para enviarnos tu comprobante directamente por WhatsApp y procesaremos tu orden de inmediato.
+                                        Si deseas coordinar detalles adicionales del pedido o soporte directo, puedes contactarnos al chat en un clic.
                                     </p>
                                 </div>
                             )}
 
-                            <div className="flex flex-col items-center justify-center gap-2 py-4">
-                                <div className="flex items-center gap-3">
-                                    <Loader2 className="animate-spin text-[#95b721] h-6 w-6" />
-                                    <span className="font-extrabold text-gray-800 text-lg">Esperando tu Yape...</span>
-                                </div>
-                                <p className="text-sm text-gray-400">Verificaremos tu pago de forma automática en pocos segundos. No cierres esta pestaña.</p>
+                            <div className="flex flex-col items-center justify-center gap-3 py-4 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        window.open(getWhatsAppMessageUrl(createdOrder), '_blank');
+                                        setStep(4);
+                                        clearCart();
+                                    }}
+                                    className="w-full bg-[#95b721] hover:bg-[#84a31d] text-white font-black py-4 rounded-2xl shadow-lg transition-all text-lg flex items-center justify-center gap-2 cursor-pointer border-none"
+                                >
+                                    Enviar Comprobante a WhatsApp
+                                </button>
+                                <p className="text-xs text-gray-400">
+                                    Al dar clic se abrirá tu WhatsApp con el mensaje listo. Envíanos la captura de tu Yape para empezar a preparar tu pedido.
+                                </p>
                             </div>
 
                             <div className="h-px bg-gray-200" />
 
                             <div className="flex flex-col md:flex-row justify-center items-center gap-4">
-                                {showSupportAlert ? (
+                                {showSupportAlert && (
                                     <a 
                                         href={getWhatsAppSupportUrl(createdOrder)}
                                         target="_blank"
@@ -701,20 +796,10 @@ const Cart = () => {
                                     >
                                         Contactar a Soporte por WhatsApp
                                     </a>
-                                ) : (
-                                    <a 
-                                        href={getWhatsAppMessageUrl(createdOrder)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full md:w-auto px-6 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
-                                    >
-                                        Enviar comprobante por WhatsApp
-                                    </a>
                                 )}
                                 <button
                                     onClick={() => {
                                         if (confirm("¿Estás seguro de cancelar esta orden pendiente?")) {
-                                            setPolling(false);
                                             setStep(1);
                                         }
                                     }}
@@ -733,9 +818,9 @@ const Cart = () => {
                         <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-green-50 text-green-500 mb-2">
                             <CheckCircle size={48} className="animate-bounce" />
                         </div>
-                        <h2 className="text-3xl font-black text-gray-900 leading-tight">¡Pago Verificado con Éxito! 🎉</h2>
+                        <h2 className="text-3xl font-black text-gray-900 leading-tight">¡Pedido Registrado con Éxito! 🎉</h2>
                         <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
-                            Tu Yape ha sido validado correctamente. Tu pedido ya está siendo preparado en nuestra cocina en Arequipa y el motorizado courier llegará pronto a tu ubicación.
+                            Tu orden ha sido registrada. Por favor, asegúrate de habernos enviado el comprobante por WhatsApp para validar tu transferencia y comenzar la preparación.
                         </p>
 
                         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-150 text-left space-y-3">
@@ -745,12 +830,12 @@ const Cart = () => {
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-400 font-bold uppercase tracking-wide">Estado</span>
-                                <span className="inline-block bg-yellow-50 text-yellow-600 border border-yellow-200 text-xs font-black px-2.5 py-0.5 rounded-full">Preparando</span>
+                                <span className="inline-block bg-yellow-50 text-yellow-600 border border-yellow-200 text-xs font-black px-2.5 py-0.5 rounded-full">Pendiente de Confirmación</span>
                             </div>
                             <div className="h-px bg-gray-200" />
                             <div className="flex justify-between items-center font-black text-gray-900">
-                                <span>Total Pagado</span>
-                                <span className="text-xl text-[#95b721]">S/ {createdOrder.total}</span>
+                                <span>Total Pedido (Snacks)</span>
+                                <span className="text-xl text-[#95b721]">S/ {parseFloat(createdOrder.subtotal || createdOrder.total).toFixed(2)}</span>
                             </div>
                         </div>
 

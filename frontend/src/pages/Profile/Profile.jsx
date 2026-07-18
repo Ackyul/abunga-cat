@@ -32,8 +32,8 @@ const Profile = () => {
   const [editDistrito, setEditDistrito] = useState("Cayma");
   const [editDireccion, setEditDireccion] = useState("");
   const [editReferencia, setEditReferencia] = useState("");
-  const [editLat, setEditLat] = useState(-16.3988);
-  const [editLng, setEditLng] = useState(-71.5369);
+  const [editLat, setEditLat] = useState(-16.4253);
+  const [editLng, setEditLng] = useState(-71.5303);
   const [editLoading, setEditLoading] = useState(false);
 
   const editMapRef = useRef(null);
@@ -58,8 +58,8 @@ const Profile = () => {
       setEditDistrito(user.distrito || "Cayma");
       setEditDireccion(user.direccion || "");
       setEditReferencia(user.referencia || "");
-      setEditLat(Number(user.latitud) || -16.3988);
-      setEditLng(Number(user.longitud) || -71.5369);
+      setEditLat(Number(user.latitud) || -16.4253);
+      setEditLng(Number(user.longitud) || -71.5303);
     }
   }, [user, loading, navigate]);
 
@@ -712,8 +712,8 @@ const Profile = () => {
                             setEditDistrito(user.distrito || "Cayma");
                             setEditDireccion(user.direccion || "");
                             setEditReferencia(user.referencia || "");
-                            setEditLat(Number(user.latitud) || -16.3988);
-                            setEditLng(Number(user.longitud) || -71.5369);
+                            setEditLat(Number(user.latitud) || -16.4253);
+                            setEditLng(Number(user.longitud) || -71.5303);
                           }}
                           className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-semibold text-sm transition cursor-pointer"
                         >

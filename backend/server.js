@@ -1283,9 +1283,9 @@ app.post('/api/shipping/estimate', async (req, res) => {
   }
 
   try {
-    // Plaza de Yanahuara, Arequipa (ubicación base fija de Abunga)
-    const ABUNGA_LAT = -16.3988;
-    const ABUNGA_LNG = -71.5369;
+    // Av. Dolores con Calle Los Pinos, Arequipa (nueva ubicación base fija de Abunga)
+    const ABUNGA_LAT = -16.4253;
+    const ABUNGA_LNG = -71.5303;
 
     // Fórmula de Haversine para calcular distancia en km
     const toRad = (x) => (x * Math.PI) / 180;
@@ -1301,9 +1301,10 @@ app.post('/api/shipping/estimate', async (req, res) => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distanceKm = R * c;
 
-    // Tarifa base: S/ 5.00. Costo por km: S/ 1.50. Tarifa máxima: S/ 20.00
-    let cost = 5.00 + distanceKm * 1.50;
-    if (cost > 20.00) cost = 20.00;
+    // Tarifa inDrive Arequipa aproximada: Base S/ 4.00, S/ 1.15 por km, con tarifa mínima de S/ 7.50
+    let cost = 4.00 + distanceKm * 1.15;
+    if (cost < 7.50) cost = 7.50;
+    if (cost > 25.00) cost = 25.00;
     
     // Redondear a 1 decimal
     cost = Math.round(cost * 10) / 10;
@@ -1508,17 +1509,14 @@ const sendTelegramNotification = async (message) => {
   }
 };
 
-// Función para enviar notificaciones automáticas al grupo de WhatsApp de tus trabajadores
-const sendWhatsAppNotification = async (message) => {
+// Función genérica para enviar mensajes a cualquier número o grupo de WhatsApp
+const sendWhatsAppNotificationCustom = async (chatId, message) => {
   const instanceId = process.env.WHATSAPP_INSTANCE_ID;
   const apiToken = process.env.WHATSAPP_API_TOKEN;
-  const chatId = process.env.WHATSAPP_CHAT_ID;
   const baseUrl = process.env.WHATSAPP_API_BASE_URL || 'https://api.green-api.com';
 
   if (!instanceId || !apiToken || !chatId) {
-    console.log('[WHATSAPP NOTIFIER MOCK] Notificación simulada para WhatsApp (credenciales de WhatsApp no configuradas):');
-    console.log(message);
-    return;
+    return false;
   }
 
   try {
@@ -1534,12 +1532,202 @@ const sendWhatsAppNotification = async (message) => {
     
     if (!res.ok) {
       const errData = await res.json();
-      console.error('[WHATSAPP NOTIFIER ERROR] Respuesta de API:', errData);
-    } else {
-      console.log('[WHATSAPP NOTIFIER SUCCESS] Notificación de Yape enviada a WhatsApp.');
+      console.error('[WHATSAPP API ERROR] Respuesta de API:', errData);
+      return false;
     }
+    return true;
   } catch (err) {
-    console.error('[WHATSAPP NOTIFIER ERROR] Falló el envío de red:', err.message);
+    console.error('[WHATSAPP API ERROR] Falló el envío de red:', err.message);
+    return false;
+  }
+};
+
+// Función para enviar notificaciones automáticas al grupo de WhatsApp de tus trabajadores
+const sendWhatsAppNotification = async (message) => {
+  const chatId = process.env.WHATSAPP_CHAT_ID;
+  if (!chatId) {
+    console.log('[WHATSAPP NOTIFIER MOCK] Notificación simulada para WhatsApp (credenciales de WhatsApp no configuradas):');
+    console.log(message);
+    return;
+  }
+  const success = await sendWhatsAppNotificationCustom(chatId, message);
+  if (success) {
+    console.log('[WHATSAPP NOTIFIER SUCCESS] Notificación de Yape enviada a WhatsApp.');
+  }
+};
+
+// Función para despachar automáticamente al WhatsApp del courier independiente de tu taller
+const dispatchCourierWhatsApp = async (order) => {
+  const courierChatId = process.env.COURIER_WHATSAPP_ID;
+  if (!courierChatId) {
+    console.log('[COURIER WA NOTIFIER MOCK] Despacho de envío a courier simulado (COURIER_WHATSAPP_ID no configurado).');
+    return null;
+  }
+
+  const recojoPhone = process.env.RECOJO_PHONE || '949237217';
+  const recojoDireccion = process.env.RECOJO_DIRECCION || 'Plaza de Yanahuara 120, Yanahuara, Arequipa';
+  const mapsUrl = `https://www.google.com/maps?q=${order.latitud},${order.longitud}`;
+
+  const itemsText = (Array.isArray(order.items) ? order.items : [])
+    .map(item => `• ${item.name} (${item.selectedWeight}) x${item.quantity}`)
+    .join('\n');
+
+  const courierMessage = 
+`🛵 *NUEVA ORDEN DE REPARTO - ABUNGA* 🛵
+*Código de Pedido:* #${order.codigo}
+
+📍 *Punto de Recojo (Taller):*
+${recojoDireccion}
+Contacto: Abunga Taller (${recojoPhone})
+
+🏁 *Punto de Entrega (Cliente):*
+${order.direccion}
+${order.referencia ? `Ref: ${order.referencia}\n` : ''}Contacto: ${order.nombre_cliente} (${order.telefono_cliente})
+
+📍 *Navegación GPS:* ${mapsUrl}
+
+📦 *Detalle del Pedido:*
+${itemsText}
+
+💰 *Cobro Delivery:* S/ ${parseFloat(order.costo_envio).toFixed(2)}`;
+
+  await sendWhatsAppNotificationCustom(courierChatId, courierMessage);
+  console.log(`[COURIER WA SUCCESS] Pedido #${order.codigo} enviado a WhatsApp del Courier.`);
+  return mapsUrl;
+};
+
+// Función para despachar automáticamente a la API de Cabify Envíos (Urbaner API)
+const dispatchUrbanerOrder = async (order) => {
+  const token = process.env.URBANER_API_TOKEN;
+  const baseUrl = process.env.URBANER_BASE_URL || 'https://middleware.urbaner.com/api';
+
+  if (!token) {
+    console.log(`[Urbaner/Cabify API MOCK] Generando despacho automático simulado en Cabify/Urbaner para el pedido #${order.codigo} (URBANER_API_TOKEN no configurada).`);
+    return {
+      success: true,
+      trackingUrl: `https://urbaner.com/tracking/mock-${order.codigo}`,
+      deliveryId: `urbaner-mock-${order.codigo}`
+    };
+  }
+
+  const recojoPhone = process.env.RECOJO_PHONE || '949237217';
+  const recojoDireccion = process.env.RECOJO_DIRECCION || 'Plaza de Yanahuara 120, Yanahuara, Arequipa';
+
+  try {
+    const payload = {
+      order: {
+        type_service: 'express',
+        payment_type: 'prepaid',
+        description: `Pedido Abunga #${order.codigo}`,
+        steps: [
+          {
+            address: recojoDireccion,
+            name: 'Abunga Taller',
+            phone: recojoPhone,
+            type: 'pickup',
+            instruction: 'Entregar pedido de snacks Abunga'
+          },
+          {
+            address: order.direccion,
+            name: order.nombre_cliente,
+            phone: order.telefono_cliente,
+            type: 'delivery',
+            instruction: order.referencia || 'Entregar al destinatario'
+          }
+        ]
+      }
+    };
+
+    const res = await fetch(`${baseUrl}/v1/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Error al crear la orden en Urbaner/Cabify.');
+    }
+
+    console.log(`[Urbaner/Cabify API SUCCESS] Pedido #${order.codigo} despachado con éxito en Cabify Envíos.`);
+    return {
+      success: true,
+      trackingUrl: data.tracking_url || `https://urbaner.com/tracking/${data.id || order.codigo}`,
+      deliveryId: data.id || `urbaner-${order.codigo}`
+    };
+  } catch (err) {
+    console.error(`[Urbaner/Cabify API ERROR] Falló el despacho del pedido #${order.codigo}:`, err.message);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+};
+
+// Función para despachar automáticamente a la API de Chazki Perú (Legacy API)
+const dispatchChazkiOrder = async (order) => {
+  const enterpriseKey = process.env.CHAZKI_ENTERPRISE_KEY;
+  const baseUrl = process.env.CHAZKI_BASE_URL || 'https://us-central1-chazki-link-beta.cloudfunctions.net/cf-custom-integrations-beta/api/legacy/peru/create/delivery-service';
+
+  if (!enterpriseKey) {
+    console.log(`[Chazki API MOCK] Generando despacho automático simulado en Chazki para el pedido #${order.codigo} (CHAZKI_ENTERPRISE_KEY no configurada).`);
+    return {
+      success: true,
+      trackingUrl: `https://chazki.com/tracking/mock-${order.codigo}`,
+      deliveryId: `chazki-mock-${order.codigo}`
+    };
+  }
+
+  const recojoPhone = process.env.RECOJO_PHONE || '949237217';
+  const recojoDireccion = process.env.RECOJO_DIRECCION || 'Plaza de Yanahuara 120, Yanahuara, Arequipa';
+
+  try {
+    const payload = [
+      {
+        address: recojoDireccion,
+        type: 'PICKUP',
+        contact_name: 'Abunga Taller',
+        contact_phone: recojoPhone,
+        delivery_type: 'EXPRESS' // Envío rápido/mismo día
+      },
+      {
+        address: order.direccion,
+        type: 'DELIVERY',
+        contact_name: order.nombre_cliente,
+        contact_phone: order.telefono_cliente,
+        reference: order.referencia || ''
+      }
+    ];
+
+    const res = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Enterprise-Key': enterpriseKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Error al crear la orden en Chazki.');
+    }
+
+    console.log(`[Chazki API SUCCESS] Pedido #${order.codigo} despachado con éxito en Chazki.`);
+    return {
+      success: true,
+      trackingUrl: data.trackingUrl || `https://chazki.com/tracking/${data.id || order.codigo}`,
+      deliveryId: data.id || `chazki-${order.codigo}`
+    };
+  } catch (err) {
+    console.error(`[Chazki API ERROR] Falló el despacho del pedido #${order.codigo}:`, err.message);
+    return {
+      success: false,
+      error: err.message
+    };
   }
 };
 
@@ -1575,8 +1763,8 @@ const dispatchPedidosYaOrder = async (order) => {
         email: 'contacto@abungasaborqueretumba.com',
         address: {
           addressString: recojoDireccion,
-          latitude: -16.3988,
-          longitude: -71.5369
+          latitude: -16.4253,
+          longitude: -71.5303
         }
       },
       receiver: {
@@ -1701,14 +1889,46 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
       RETURNING *
     `;
 
-    // 5. Lanzar despacho automático de PedidosYa
+    // 5. Lanzar despacho automático de PedidosYa o Courier WhatsApp
     let finalOrder = updated[0];
     try {
-      const dispatchResult = await dispatchPedidosYaOrder(finalOrder);
-      if (dispatchResult.success) {
+      let trackingUrl = '';
+      let deliveryId = '';
+
+      if (process.env.URBANER_API_TOKEN) {
+        // Opción Cabify: Despacho oficial por Cabify Envíos (Urbaner API)
+        const dispatchResult = await dispatchUrbanerOrder(finalOrder);
+        if (dispatchResult.success) {
+          trackingUrl = dispatchResult.trackingUrl;
+          deliveryId = dispatchResult.deliveryId;
+        }
+      } else if (process.env.CHAZKI_ENTERPRISE_KEY) {
+        // Opción 2: Despacho oficial por Chazki API
+        const dispatchResult = await dispatchChazkiOrder(finalOrder);
+        if (dispatchResult.success) {
+          trackingUrl = dispatchResult.trackingUrl;
+          deliveryId = dispatchResult.deliveryId;
+        }
+      } else if (process.env.PEDIDOSYA_CLIENT_ID && process.env.PEDIDOSYA_CLIENT_SECRET) {
+        // Opción A: Despacho oficial por PedidosYa API
+        const dispatchResult = await dispatchPedidosYaOrder(finalOrder);
+        if (dispatchResult.success) {
+          trackingUrl = dispatchResult.trackingUrl;
+          deliveryId = dispatchResult.deliveryId;
+        }
+      } else if (process.env.COURIER_WHATSAPP_ID) {
+        // Opción B: Despacho inmediato a tu Repartidor por WhatsApp
+        const waTrackingUrl = await dispatchCourierWhatsApp(finalOrder);
+        if (waTrackingUrl) {
+          trackingUrl = waTrackingUrl;
+          deliveryId = `wa-${finalOrder.codigo}`;
+        }
+      }
+
+      if (trackingUrl) {
         const withTracking = await sql`
           UPDATE pedidos
-          SET tracking_url = ${dispatchResult.trackingUrl}, delivery_id = ${dispatchResult.deliveryId || null}
+          SET tracking_url = ${trackingUrl}, delivery_id = ${deliveryId || null}
           WHERE id = ${pedido.id}
           RETURNING *
         `;
@@ -1717,7 +1937,7 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
         }
       }
     } catch (e) {
-      console.error("[YAPE WEBHOOK] Fallo al despachar PedidosYa:", e);
+      console.error("[YAPE WEBHOOK] Fallo al despachar el delivery:", e);
     }
     // 6. Enviar notificación al grupo de trabajadores
     try {
@@ -1726,7 +1946,7 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
         .join('\n');
       
       const trackingInfo = finalOrder.tracking_url 
-        ? `\n🛵 *Delivery despachado (PedidosYa):* [Seguir Envío en Vivo](${finalOrder.tracking_url})` 
+        ? `\n🛵 *Envío programado:* [Seguir / Ver Mapa de Entrega](${finalOrder.tracking_url})` 
         : '\n⚠️ *Despacho de Delivery Fallido.* Coordinar envío manual.';
 
       const notificationMsg = 
