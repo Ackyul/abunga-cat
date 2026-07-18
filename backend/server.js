@@ -1453,6 +1453,107 @@ app.put('/api/admin/orders/:id/status', verifySessionMiddleware, async (req, res
   }
 });
 
+// Función de integración con PedidosYa Envíos API
+const getPedidosYaToken = async () => {
+  const clientId = process.env.PEDIDOSYA_CLIENT_ID;
+  const clientSecret = process.env.PEDIDOSYA_CLIENT_SECRET;
+  const baseUrl = process.env.PEDIDOSYA_BASE_URL || 'https://partner-api.pedidosya.com';
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('Credenciales de PedidosYa no configuradas.');
+  }
+
+  const res = await fetch(`${baseUrl}/v1/oauth/token?grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Error de autenticación con PedidosYa.');
+  }
+  return data.access_token;
+};
+
+const dispatchPedidosYaOrder = async (order) => {
+  const clientId = process.env.PEDIDOSYA_CLIENT_ID;
+  const clientSecret = process.env.PEDIDOSYA_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    console.log(`[PedidosYa API MOCK] Generando despacho automático simulado para el pedido #${order.codigo} (Credenciales no configuradas).`);
+    return {
+      success: true,
+      trackingUrl: `https://pedidosya.com/envios/tracking/mock-${order.codigo}`,
+      deliveryId: `mock-id-${order.codigo}`
+    };
+  }
+
+  try {
+    const token = await getPedidosYaToken();
+    const baseUrl = process.env.PEDIDOSYA_BASE_URL || 'https://partner-api.pedidosya.com';
+
+    const payload = {
+      reference: order.codigo,
+      description: `Pedido de snacks Abunga #${order.codigo}`,
+      notificationMail: 'contacto@abungasaborqueretumba.com',
+      notificationPhone: '949237217',
+      sender: {
+        name: 'Abunga Arequipa',
+        phone: '949237217',
+        email: 'contacto@abungasaborqueretumba.com',
+        address: {
+          addressString: 'Plaza de Yanahuara 120, Yanahuara, Arequipa',
+          latitude: -16.3988,
+          longitude: -71.5369
+        }
+      },
+      receiver: {
+        name: order.nombre_cliente,
+        phone: order.telefono_cliente,
+        address: {
+          addressString: order.direccion,
+          latitude: parseFloat(order.latitud),
+          longitude: parseFloat(order.longitud)
+        }
+      },
+      items: (Array.isArray(order.items) ? order.items : []).map(item => ({
+        name: `${item.name} (${item.selectedWeight})`,
+        quantity: item.quantity,
+        price: parseFloat(item.price),
+        value: parseFloat(item.price) * item.quantity
+      })),
+      isPaid: true
+    };
+
+    const res = await fetch(`${baseUrl}/v1/shippings`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Error al despachar el envío en PedidosYa.');
+    }
+
+    console.log(`[PedidosYa API SUCCESS] Pedido #${order.codigo} despachado. ID Envío: ${data.id}`);
+    return {
+      success: true,
+      trackingUrl: data.trackingUrl || `https://pedidosya.com/envios/tracking/${data.id}`,
+      deliveryId: data.id
+    };
+  } catch (err) {
+    console.error(`[PedidosYa API ERROR] Falló el despacho del pedido #${order.codigo}:`, err.message);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+};
+
 // POST /api/payments/yape-webhook - Webhook de validación de pago de Yape automática
 app.post('/api/payments/yape-webhook', async (req, res) => {
   const { monto, celular_emisor, mensaje_yape } = req.body || {};
@@ -1520,7 +1621,7 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
       return res.status(404).json({ error: 'No se encontró ningún pedido pendiente coincidente.' });
     }
 
-    // 4. Actualizar el estado del pedido
+    // 4. Actualizar el estado del pedido a 'Preparando'
     const updated = await sql`
       UPDATE pedidos
       SET estado = 'Preparando'
@@ -1528,8 +1629,27 @@ app.post('/api/payments/yape-webhook', async (req, res) => {
       RETURNING *
     `;
 
+    // 5. Lanzar despacho automático de PedidosYa
+    let finalOrder = updated[0];
+    try {
+      const dispatchResult = await dispatchPedidosYaOrder(finalOrder);
+      if (dispatchResult.success) {
+        const withTracking = await sql`
+          UPDATE pedidos
+          SET tracking_url = ${dispatchResult.trackingUrl}, delivery_id = ${dispatchResult.deliveryId || null}
+          WHERE id = ${pedido.id}
+          RETURNING *
+        `;
+        if (withTracking.length > 0) {
+          finalOrder = withTracking[0];
+        }
+      }
+    } catch (e) {
+      console.error("[YAPE WEBHOOK] Fallo al despachar PedidosYa:", e);
+    }
+
     console.log(`[YAPE WEBHOOK SUCCESS] Pedido ${pedido.codigo} verificado y cambiado a 'Preparando'.`);
-    return res.status(200).json({ success: true, message: 'Pago verificado.', order: updated[0] });
+    return res.status(200).json({ success: true, message: 'Pago verificado.', order: finalOrder });
   } catch (err) {
     console.error('[YAPE WEBHOOK ERROR]', err);
     return res.status(500).json({ error: 'Error interno al procesar el webhook de Yape.' });

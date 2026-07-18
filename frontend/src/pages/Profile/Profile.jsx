@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Navbar } from "../../components/navbar";
 import Footer from "../../components/footer";
@@ -505,14 +505,26 @@ const Profile = () => {
                       {/* Footer de la tarjeta de pedido */}
                       <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-2">
                         <span className="text-xs text-gray-400">Entrega gestionada vía **PedidosYa Envíos Arequipa**</span>
-                        <a 
-                          href={getWhatsAppConfirmUrl(order)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full md:w-auto text-center px-4 py-2 border border-gray-250 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-xs transition cursor-pointer"
-                        >
-                          Preguntar por WhatsApp
-                        </a>
+                        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                          {order.tracking_url && (
+                            <a 
+                              href={order.tracking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-2 bg-[#95b721] hover:bg-[#84a31d] text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5 w-full md:w-auto text-center"
+                            >
+                              <Truck size={14} /> Seguir Pedido en Vivo
+                            </a>
+                          )}
+                          <a 
+                            href={getWhatsAppConfirmUrl(order)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 border border-gray-250 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-xs transition cursor-pointer w-full md:w-auto text-center"
+                          >
+                            Preguntar por WhatsApp
+                          </a>
+                        </div>
                       </div>
                     </div>
                   ))
