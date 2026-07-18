@@ -28,8 +28,11 @@ const Cart = () => {
 
     const handleMakeOrder = () => {
         const userName = user?.name || "";
-        const namePart = userName ? ` Soy ${userName}.` : "";
-        let message = `¡Hola Abunga! 🌟${namePart} Me gustaría realizar el siguiente pedido:\n\n`;
+        const userPhone = user?.phone || "";
+        const namePart = userName ? ` Soy ${userName}` : "";
+        const phonePart = userPhone ? ` (Teléfono: ${userPhone})` : "";
+        const introSeparator = namePart || phonePart ? "." : "";
+        let message = `¡Hola Abunga! 🌟${namePart}${phonePart}${introSeparator} Me gustaría realizar el siguiente pedido:\n\n`;
         cart.forEach((item) => {
             const itemTotal = (item.price * item.quantity).toFixed(2);
             message += `*• ${item.name} (${item.selectedWeight})*\n`;
