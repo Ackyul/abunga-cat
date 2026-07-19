@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { cn } from "../lib/utils";
-import { PRECIOS } from "../lib/constants";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";

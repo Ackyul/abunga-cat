@@ -6,14 +6,21 @@ import { SidebarFilters } from "../../components/sidebar-filters";
 import { Navbar } from "../../components/navbar";
 import { ChevronDown, Sparkles } from "lucide-react";
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
 import { Link } from "react-router-dom";
-import { PRECIOS } from "../../lib/constants";
+import useProductStore from "../../stores/useProductStore";
 
 const Catalogo = () => {
   const [isMixOpen, setIsMixOpen] = useState(false);
+  const { products, getProducts } = useProductStore();
+
+  useEffect(() => {
+    getProducts();
+  }, [getProducts]);
+
+  const mixProduct = products.find((p) => p.tipo === "Mix");
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -58,19 +65,12 @@ const Catalogo = () => {
                   </Collapsible.Trigger>
                   <Collapsible.Content className="border-t border-gray-100 p-4 flex justify-center bg-white data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
                       <div className="w-full max-w-sm">
-                        <ProductCard 
-                            product={{
-                                id: "mixtos-especial-mobile",
-                                name: "Mix de Frutas Deshidratadas",
-                                image: "/mixtos.png",
-                                precio: 25,
-                                brand: "Abunga",
-                                tipo: "Mix",
-                                fruta: "Mix",
-                                precios: PRECIOS["Mix"]
-                            }} 
-                            showActions={true}
-                        />
+                        {mixProduct && (
+                          <ProductCard 
+                              product={mixProduct} 
+                              showActions={true}
+                          />
+                        )}
                       </div>
                   </Collapsible.Content>
                </Collapsible.Root>
@@ -94,19 +94,12 @@ const Catalogo = () => {
                   </Collapsible.Trigger>
                   <Collapsible.Content className="border-t border-gray-100 p-4 flex justify-center bg-white data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
                       <div className="w-full max-w-sm">
-                        <ProductCard 
-                            product={{
-                                id: "mixtos-especial-tablet",
-                                name: "Mix de Frutas Deshidratadas",
-                                image: "/mixtos.png",
-                                precio: 25,
-                                brand: "Abunga",
-                                tipo: "Mix",
-                                fruta: "Mix",
-                                precios: PRECIOS["Mix"]
-                            }} 
-                            showActions={true}
-                        />
+                        {mixProduct && (
+                          <ProductCard 
+                              product={mixProduct} 
+                              showActions={true}
+                          />
+                        )}
                       </div>
                   </Collapsible.Content>
                </Collapsible.Root>
@@ -116,19 +109,12 @@ const Catalogo = () => {
           </div>
           <div className="hidden xl:block w-64 shrink-0">
              <div className="sticky top-24">
-                <ProductCard 
-                    product={{
-                        id: "mixtos-especial",
-                        name: "Mix de Frutas Deshidratadas",
-                        image: "/mixtos.png",
-                        precio: 25,
-                        brand: "Abunga",
-                        tipo: "Mix",
-                        fruta: "Mix",
-                        precios: PRECIOS["Mix"]
-                    }} 
-                    showActions={true}
-                />
+                {mixProduct && (
+                  <ProductCard 
+                      product={mixProduct} 
+                      showActions={true}
+                  />
+                )}
              </div>
           </div>
         </div>

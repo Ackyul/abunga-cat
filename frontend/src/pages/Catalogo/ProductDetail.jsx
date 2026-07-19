@@ -6,7 +6,6 @@ import Footer from "../../components/footer";
 import useProductStore from "../../stores/useProductStore";
 import useCartStore from "../../stores/useCartStore";
 import useAuthStore from "../../stores/useAuthStore";
-import { PRECIOS } from "../../lib/constants";
 import { slugify } from "../../lib/slugify";
 import { cn } from "../../lib/utils";
 import { toast } from "sonner";
@@ -27,23 +26,6 @@ export default function ProductDetail() {
   const getProduct = () => {
     if (!products || products.length === 0) return null;
     
-    // Mix de Frutas Deshidratadas (Special inline product from Catalog page)
-    if (productSlug === "mix-de-frutas-deshidratadas" || productSlug === "mix-de-frutas") {
-      return {
-        id: "mixtos-especial",
-        name: "Mix de Frutas Deshidratadas",
-        tipo: "Mix",
-        fruta: "Mix",
-        image: "/mixtos.png",
-        precio: 25,
-        brand: "Abunga",
-        visible: true,
-        bg_color: null,
-        text_color: null,
-        precios: PRECIOS["Mix"]
-      };
-    }
-
     return products.find(p => slugify(p.name) === productSlug);
   };
 

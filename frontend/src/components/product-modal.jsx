@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { PRECIOS } from "../lib/constants";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import useCartStore from "../stores/useCartStore";

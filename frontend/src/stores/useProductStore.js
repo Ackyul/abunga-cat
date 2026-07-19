@@ -64,6 +64,8 @@ const useProductStore = create((set, get) => ({
             else if (nameLow.includes("energ")) newImage = "/i-energia.png";
             else if (nameLow.includes("defensa")) newImage = "/i-defensa.png";
             else if (nameLow.includes("digesti")) newImage = "/i-digestion.png";
+          } else if (p.tipo === "Mix") {
+            newImage = "/mixtos.png";
           }
         }
 

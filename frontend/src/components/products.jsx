@@ -37,7 +37,7 @@ function Products() {
       return <div className="text-center p-12 text-red-500 font-bold">{error}</div>;
   }
 
-  const filtered = getFilteredProducts();
+  const filtered = getFilteredProducts().filter(p => p.tipo !== "Mix");
   const visibleProducts = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 

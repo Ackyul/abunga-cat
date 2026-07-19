@@ -56,7 +56,8 @@ INSERT INTO productos (name, tipo, fruta, image, precio, precios, brand) VALUES
 ('Ritual Defensa', 'Infusión', 'Fresa y arandano', NULL, 10.00, NULL, 'Abunga'),
 ('Ritual Digestión', 'Infusión', 'Piña', NULL, 10.00, NULL, 'Abunga'),
 ('Manzana Deshidratada con Canela', 'Fruta', 'Manzana', NULL, 10.00, NULL, 'Abunga'),
-('Naranja Deshidratada', 'Fruta', 'Naranja', NULL, 10.00, NULL, 'Abunga');
+('Naranja Deshidratada', 'Fruta', 'Naranja', NULL, 10.00, NULL, 'Abunga'),
+('Mix de Frutas Deshidratadas', 'Mix', 'Mix', NULL, 25.00, '{"50gr": 10, "100gr": 20, "250gr": 36, "350gr": 45, "500gr": 65, "1kg": 130}', 'Abunga');
 
 -- Sembrar noticias iniciales
 TRUNCATE TABLE noticias RESTART IDENTITY;
