@@ -16,20 +16,32 @@ export default function ProductDetail() {
   const { products, loading, error, validateProducts } = useProductStore();
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
   const { user } = useAuthStore();
-  const [selectedWeight, setSelectedWeight] = useState("50gr");
 
-  useEffect(() => {
-    validateProducts();
-  }, []);
-
-  // Find the product by checking slug
   const getProduct = () => {
     if (!products || products.length === 0) return null;
-    
     return products.find(p => slugify(p.name) === productSlug);
   };
 
   const product = getProduct();
+
+  let preciosObj = product?.precios;
+  if (typeof preciosObj === 'string') {
+    try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
+  }
+  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const hasWeights = weights.length > 0;
+
+  const [selectedWeight, setSelectedWeight] = useState("50gr");
+
+  useEffect(() => {
+    if (hasWeights) {
+      setSelectedWeight(weights[0]);
+    }
+  }, [product, hasWeights]);
+
+  useEffect(() => {
+    validateProducts();
+  }, []);
 
   // If loading and no product is resolved yet
   if (loading && !product) {
@@ -219,7 +231,6 @@ export default function ProductDetail() {
 
   const nameLow2 = product.name?.toLowerCase() || "";
   const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
-  const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
 
   const cartItem = cart.find(
     (item) => item.id === product.id && item.selectedWeight === selectedWeight
@@ -344,10 +355,7 @@ export default function ProductDetail() {
                   Selecciona la presentación:
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {(product.tipo === "Mix"
-                    ? ["50gr", "100gr", "250gr", "350gr", "500gr", "1kg"]
-                    : ["50gr", "100gr", "500gr", "1kg"]
-                  ).map((w) => (
+                  {weights.map((w) => (
                     <button
                       key={w}
                       onClick={() => setSelectedWeight(w)}

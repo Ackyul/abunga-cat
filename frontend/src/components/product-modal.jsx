@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "./ui/dialog";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
@@ -8,10 +8,23 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export function ProductModal({ product, isOpen, onClose }) {
+  let preciosObj = product?.precios;
+  if (typeof preciosObj === 'string') {
+    try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
+  }
+  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const hasWeights = weights.length > 0;
+
   const [selectedWeight, setSelectedWeight] = useState("50gr");
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (hasWeights) {
+      setSelectedWeight(weights[0]);
+    }
+  }, [product, isOpen, hasWeights]);
 
   if (!product) return null;
 
@@ -122,7 +135,6 @@ export function ProductModal({ product, isOpen, onClose }) {
 
   const nameLow2 = product.name?.toLowerCase() || "";
   const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
-  const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
 
   const cartItem = cart.find(
     (item) => item.id === product.id && item.selectedWeight === selectedWeight
@@ -218,10 +230,7 @@ export function ProductModal({ product, isOpen, onClose }) {
                 <div className="space-y-2 md:space-y-4">
                     <p className="text-xs md:text-sm font-bold text-gray-900 uppercase">Selecciona el peso:</p>
                     <div className="flex gap-2 md:gap-4 overflow-x-auto pb-2">
-                        {(product.tipo === "Mix" 
-                            ? ["50gr", "100gr", "250gr", "350gr", "500gr", "1kg"] 
-                            : ["50gr", "100gr", "500gr", "1kg"]
-                        ).map((weight) => (
+                        {weights.map((weight) => (
                             <button 
                                 key={weight}
                                 onClick={() => setSelectedWeight(weight)}

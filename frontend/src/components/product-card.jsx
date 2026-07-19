@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "../lib/utils";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
@@ -9,9 +9,24 @@ import { toast } from "sonner";
 import { slugify } from "../lib/slugify";
 
 function ProductCard({ product, showActions = false }) {
-  const [selectedWeight, setSelectedWeight] = useState("50gr");
+  let preciosObj = product?.precios;
+  if (typeof preciosObj === 'string') {
+    try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
+  }
+  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const hasWeights = weights.length > 0;
+
+  const [selectedWeight, setSelectedWeight] = useState(() => {
+    return hasWeights ? weights[0] : "50gr";
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToCart, cart, updateQuantity, removeFromCart } = useCartStore();
+
+  useEffect(() => {
+    if (hasWeights && !weights.includes(selectedWeight)) {
+      setSelectedWeight(weights[0]);
+    }
+  }, [product, hasWeights]);
   const { user } = useAuthStore();
   const { filters } = useProductStore();
   const navigate = useNavigate();
@@ -261,7 +276,6 @@ function ProductCard({ product, showActions = false }) {
 
   const nameLow2 = product.name?.toLowerCase() || "";
   const isFixedPrice = nameLow2.includes("canela") || product.fruta === "Naranja";
-  const hasWeights = (product.tipo === "Fruta" || product.tipo === "Mix") && !isFixedPrice;
 
   return (
     <>
@@ -319,11 +333,8 @@ function ProductCard({ product, showActions = false }) {
 
           {/* Weight selector */}
           {hasWeights && (
-            <div className={`grid ${product.tipo === "Mix" ? "grid-cols-3" : "grid-cols-4"} gap-1`}>
-              {(product.tipo === "Mix"
-                ? ["50gr", "100gr", "250gr", "350gr", "500gr", "1kg"]
-                : ["50gr", "100gr", "500gr", "1kg"]
-              ).map((w) => (
+            <div className={`grid ${weights.length <= 3 ? "grid-cols-3" : "grid-cols-4"} gap-1`}>
+              {weights.map((w) => (
                 <button
                   key={w}
                   onClick={(e) => { e.stopPropagation(); setSelectedWeight(w); }}
