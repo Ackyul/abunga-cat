@@ -7,7 +7,7 @@ import useProductStore from "../../stores/useProductStore";
 import useCartStore from "../../stores/useCartStore";
 import useAuthStore from "../../stores/useAuthStore";
 import { slugify } from "../../lib/slugify";
-import { cn } from "../../lib/utils";
+import { cn, sortWeights } from "../../lib/utils";
 import { toast } from "sonner";
 
 export default function ProductDetail() {
@@ -28,7 +28,7 @@ export default function ProductDetail() {
   if (typeof preciosObj === 'string') {
     try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
   }
-  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const weights = preciosObj && typeof preciosObj === 'object' ? sortWeights(Object.keys(preciosObj)) : [];
   const hasWeights = weights.length > 0;
 
   const [selectedWeight, setSelectedWeight] = useState("50gr");

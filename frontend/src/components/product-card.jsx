@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { cn } from "../lib/utils";
+import { cn, sortWeights } from "../lib/utils";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
@@ -13,7 +13,7 @@ function ProductCard({ product, showActions = false }) {
   if (typeof preciosObj === 'string') {
     try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
   }
-  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const weights = preciosObj && typeof preciosObj === 'object' ? sortWeights(Object.keys(preciosObj)) : [];
   const hasWeights = weights.length > 0;
 
   const [selectedWeight, setSelectedWeight] = useState(() => {

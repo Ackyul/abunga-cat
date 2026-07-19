@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { cn } from "../lib/utils";
+import { cn, sortWeights } from "../lib/utils";
 import { Button } from "./ui/button";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
@@ -12,7 +12,7 @@ export function ProductModal({ product, isOpen, onClose }) {
   if (typeof preciosObj === 'string') {
     try { preciosObj = JSON.parse(preciosObj); } catch (e) { preciosObj = null; }
   }
-  const weights = preciosObj && typeof preciosObj === 'object' ? Object.keys(preciosObj) : [];
+  const weights = preciosObj && typeof preciosObj === 'object' ? sortWeights(Object.keys(preciosObj)) : [];
   const hasWeights = weights.length > 0;
 
   const [selectedWeight, setSelectedWeight] = useState("50gr");

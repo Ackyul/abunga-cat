@@ -4,6 +4,7 @@ import Footer from '../../components/footer';
 import { toast } from 'sonner';
 import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, FileText, ShoppingBag, Globe, Camera, Search, Package, MapPin, Clock, Truck } from 'lucide-react';
 import BannerGenerator from '../../components/banner-generator';
+import { sortWeights } from '../../lib/utils';
 
 const getProductImage = (product) => {
   if (!product) return '';
@@ -80,8 +81,11 @@ export default function Admin() {
     visible: true
   });
 
-  const [newWeightInput, setNewWeightInput] = useState({});
-  const [newProductWeightInput, setNewProductWeightInput] = useState('');
+  const [newWeightNum, setNewWeightNum] = useState({});
+  const [newWeightUnit, setNewWeightUnit] = useState({});
+  const [newProductWeightNum, setNewProductWeightNum] = useState('');
+  const [newProductWeightUnit, setNewProductWeightUnit] = useState('gr');
+  const [newProductUsePreciosPorPeso, setNewProductUsePreciosPorPeso] = useState(false);
 
   // New news form state
   const [newArticle, setNewArticle] = useState({
@@ -265,12 +269,13 @@ export default function Admin() {
     setProducts(updated);
   };
 
-  const handleAddProductWeight = (index, size) => {
+  const handleAddProductWeight = (index, num, unit) => {
     const updated = [...products];
     let precios = updated[index].precios || {};
     if (typeof precios === 'string') {
       try { precios = JSON.parse(precios); } catch (e) { precios = {}; }
     }
+    const size = `${num}${unit}`;
     if (precios[size] !== undefined) {
       toast.error(`El peso "${size}" ya existe en este producto.`);
       return;
@@ -292,7 +297,9 @@ export default function Admin() {
     setProducts(updated);
   };
 
-  const handleAddNewProductWeight = (size) => {
+  const handleAddNewProductWeight = (num, unit) => {
+    if (!num) return;
+    const size = `${num}${unit}`;
     const precios = { ...newProduct.precios };
     if (precios[size] !== undefined) {
       toast.error(`El peso "${size}" ya existe.`);
@@ -306,6 +313,39 @@ export default function Admin() {
     const precios = { ...newProduct.precios };
     delete precios[size];
     setNewProduct({ ...newProduct, precios });
+  };
+
+  const handleToggleProductPriceMode = (index, checked) => {
+    const updated = [...products];
+    if (checked) {
+      updated[index].precios = updated[index].precios && Object.keys(updated[index].precios).length > 0
+        ? updated[index].precios 
+        : { '50gr': '' };
+      updated[index].precio = '';
+    } else {
+      updated[index].precios = null;
+      if (!updated[index].precio) {
+        updated[index].precio = '10';
+      }
+    }
+    setProducts(updated);
+  };
+
+  const handleToggleNewProductPriceMode = (checked) => {
+    setNewProductUsePreciosPorPeso(checked);
+    if (checked) {
+      setNewProduct({
+        ...newProduct,
+        precios: { '50gr': '' },
+        precio: ''
+      });
+    } else {
+      setNewProduct({
+        ...newProduct,
+        precios: {},
+        precio: '10'
+      });
+    }
   };
 
   // Save modified product
@@ -392,6 +432,7 @@ export default function Admin() {
       if (res.ok) {
         toast.success('Producto creado con éxito.');
         setShowAddProduct(false);
+        setNewProductUsePreciosPorPeso(false);
         setNewProduct({
           name: '',
           tipo: 'Fruta',
@@ -691,6 +732,19 @@ export default function Admin() {
                     />
                   </div>
 
+                  <div className="flex items-center gap-2 mb-3">
+                    <input
+                      type="checkbox"
+                      id="newProductUsePreciosPorPeso"
+                      checked={newProductUsePreciosPorPeso}
+                      onChange={(e) => handleToggleNewProductPriceMode(e.target.checked)}
+                      className="h-4 w-4 text-[#95b721] border-gray-200 rounded-sm focus:ring-[#95b721] cursor-pointer"
+                    />
+                    <label htmlFor="newProductUsePreciosPorPeso" className="text-xs font-bold text-gray-700 cursor-pointer">
+                      Definir precios por peso (desactiva precio base)
+                    </label>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">Precio Base / Fijo (S/)</label>
                     <input
@@ -698,8 +752,9 @@ export default function Admin() {
                       step="0.01"
                       placeholder="Ej. 10.00"
                       value={newProduct.precio}
+                      disabled={newProductUsePreciosPorPeso}
                       onChange={(e) => setNewProduct({ ...newProduct, precio: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721] disabled:bg-gray-100 disabled:text-gray-400"
                     />
                   </div>
 
@@ -715,63 +770,73 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-4 space-y-3">
-                  <h4 className="text-xs font-bold text-gray-600 uppercase">Precios por Peso (Opcional, sobrescribe el precio base):</h4>
-                  {Object.keys(newProduct.precios || {}).length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No se han definido pesos para este nuevo producto.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.keys(newProduct.precios).map((size) => (
-                        <div key={size} className="space-y-1 relative">
-                          <div className="flex justify-between items-center">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase">Tamaño {size} (S/)</label>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveNewProductWeight(size)}
-                              className="text-red-500 hover:text-red-700 text-xs font-bold cursor-pointer"
-                              title={`Eliminar peso ${size}`}
-                            >
-                              ✕
-                            </button>
+                {newProductUsePreciosPorPeso && (
+                  <div className="border-t border-gray-100 pt-4 space-y-3">
+                    <h4 className="text-xs font-bold text-gray-600 uppercase">Precios por Peso:</h4>
+                    {Object.keys(newProduct.precios || {}).length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">No se han definido pesos para este nuevo producto.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {sortWeights(Object.keys(newProduct.precios)).map((size) => (
+                          <div key={size} className="space-y-1 relative">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-bold text-gray-500 uppercase">Tamaño {size} (S/)</label>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveNewProductWeight(size)}
+                                className="text-red-500 hover:text-red-700 text-xs font-bold cursor-pointer"
+                                title={`Eliminar peso ${size}`}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Precio (S/)"
+                              value={newProduct.precios[size]}
+                              onChange={(e) => setNewProduct({
+                                ...newProduct,
+                                precios: { ...newProduct.precios, [size]: e.target.value }
+                              })}
+                              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                            />
                           </div>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Precio (S/)"
-                            value={newProduct.precios[size]}
-                            onChange={(e) => setNewProduct({
-                              ...newProduct,
-                              precios: { ...newProduct.precios, [size]: e.target.value }
-                            })}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                          />
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+                    {/* Control para añadir nuevo peso a nuevo producto */}
+                    <div className="flex gap-2 items-center mt-2 border-t border-dashed border-gray-200 pt-2">
+                      <input 
+                        type="number" 
+                        placeholder="Ej: 250" 
+                        value={newProductWeightNum}
+                        onChange={(e) => setNewProductWeightNum(e.target.value)}
+                        className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-[#95b721]"
+                      />
+                      <select
+                        value={newProductWeightUnit}
+                        onChange={(e) => setNewProductWeightUnit(e.target.value)}
+                        className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-16 focus:outline-none focus:ring-1 focus:ring-[#95b721]"
+                      >
+                        <option value="gr">gr</option>
+                        <option value="kg">kg</option>
+                      </select>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const num = newProductWeightNum.trim();
+                          if (!num) return;
+                          handleAddNewProductWeight(num, newProductWeightUnit);
+                          setNewProductWeightNum('');
+                        }}
+                        className="px-3 py-1.5 bg-[#95b721] hover:bg-[#85a31d] text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      >
+                        + Añadir Peso
+                      </button>
                     </div>
-                  )}
-                  {/* Control para añadir nuevo peso a nuevo producto */}
-                  <div className="flex gap-2 items-center mt-2 border-t border-dashed border-gray-200 pt-2">
-                    <input 
-                      type="text" 
-                      placeholder="Ej: 250gr" 
-                      value={newProductWeightInput}
-                      onChange={(e) => setNewProductWeightInput(e.target.value)}
-                      className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg w-28 focus:outline-none focus:ring-1 focus:ring-[#95b721]"
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const size = newProductWeightInput.trim();
-                        if (!size) return;
-                        handleAddNewProductWeight(size);
-                        setNewProductWeightInput('');
-                      }}
-                      className="px-3 py-1.5 bg-[#95b721] hover:bg-[#85a31d] text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
-                    >
-                      + Añadir Peso
-                    </button>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-between items-center border-t border-gray-100 pt-4">
                   <div className="flex items-center gap-2">
@@ -895,24 +960,36 @@ export default function Admin() {
                         />
                       </div>
 
+                      <div className="flex items-center gap-2 md:col-span-4 mt-2">
+                        <input
+                          type="checkbox"
+                          id={`usePreciosPorPeso-${product.id}`}
+                          checked={product.precios && typeof product.precios === 'object' && Object.keys(product.precios).length > 0}
+                          onChange={(e) => handleToggleProductPriceMode(idx, e.target.checked)}
+                          className="h-4 w-4 text-[#95b721] border-gray-200 rounded-sm focus:ring-[#95b721] cursor-pointer"
+                        />
+                        <label htmlFor={`usePreciosPorPeso-${product.id}`} className="text-xs font-bold text-gray-700 cursor-pointer">
+                          Definir precios por peso (desactiva precio base)
+                        </label>
+                      </div>
+
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Precio Base (S/)</label>
                         <input
                           type="number"
                           step="0.01"
                           value={product.precio || ''}
+                          disabled={product.precios && typeof product.precios === 'object' && Object.keys(product.precios).length > 0}
                           onChange={(e) => handleProductFieldChange(idx, 'precio', e.target.value)}
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#95b721] disabled:bg-gray-100 disabled:text-gray-400"
                         />
                       </div>
 
-                      <div className="md:col-span-4 space-y-3 bg-slate-50/50 p-3 rounded-2xl border border-gray-100">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase block">Precios por Peso:</label>
-                        {Object.keys(preciosObj).length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">No se han definido pesos para este producto.</p>
-                        ) : (
+                      {product.precios && typeof product.precios === 'object' && Object.keys(product.precios).length > 0 && (
+                        <div className="md:col-span-4 space-y-3 bg-slate-50/50 p-3 rounded-2xl border border-gray-100">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block">Precios por Peso:</label>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {Object.keys(preciosObj).map((size) => (
+                            {sortWeights(Object.keys(preciosObj)).map((size) => (
                               <div key={size} className="space-y-1 relative">
                                 <div className="flex justify-between items-center">
                                   <label className="text-[9px] font-bold text-gray-500 uppercase">{size}</label>
@@ -936,30 +1013,40 @@ export default function Admin() {
                               </div>
                             ))}
                           </div>
-                        )}
-                        {/* Control para añadir nuevo peso */}
-                        <div className="flex gap-2 items-center mt-2 border-t border-dashed border-gray-200 pt-2">
-                          <input 
-                            type="text" 
-                            placeholder="Ej: 250gr" 
-                            value={newWeightInput[idx] || ''}
-                            onChange={(e) => setNewWeightInput({ ...newWeightInput, [idx]: e.target.value })}
-                            className="px-2 py-1 text-xs border border-gray-200 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-[#95b721] bg-white"
-                          />
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              const size = newWeightInput[idx]?.trim();
-                              if (!size) return;
-                              handleAddProductWeight(idx, size);
-                              setNewWeightInput({ ...newWeightInput, [idx]: '' });
-                            }}
-                            className="px-3 py-1 bg-[#95b721] hover:bg-[#85a31d] text-white rounded-lg text-[10px] font-bold transition-all shadow-sm cursor-pointer"
-                          >
-                            + Añadir Peso
-                          </button>
+                          
+                          {/* Control para añadir nuevo peso */}
+                          <div className="flex gap-2 items-center mt-2 border-t border-dashed border-gray-200 pt-2">
+                            <input 
+                              type="number" 
+                              placeholder="Ej: 250" 
+                              value={newWeightNum[idx] || ''}
+                              onChange={(e) => setNewWeightNum({ ...newWeightNum, [idx]: e.target.value })}
+                              className="px-2 py-1 text-xs border border-gray-200 rounded-lg w-20 focus:outline-none focus:ring-1 focus:ring-[#95b721] bg-white"
+                            />
+                            <select
+                              value={newWeightUnit[idx] || 'gr'}
+                              onChange={(e) => setNewWeightUnit({ ...newWeightUnit, [idx]: e.target.value })}
+                              className="px-1 py-1 text-xs border border-gray-200 rounded-lg w-14 focus:outline-none focus:ring-1 focus:ring-[#95b721] bg-white"
+                            >
+                              <option value="gr">gr</option>
+                              <option value="kg">kg</option>
+                            </select>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const num = newWeightNum[idx]?.trim();
+                                if (!num) return;
+                                const unit = newWeightUnit[idx] || 'gr';
+                                handleAddProductWeight(idx, num, unit);
+                                setNewWeightNum({ ...newWeightNum, [idx]: '' });
+                              }}
+                              className="px-3 py-1 bg-[#95b721] hover:bg-[#85a31d] text-white rounded-lg text-[10px] font-bold transition-all shadow-sm cursor-pointer"
+                            >
+                              + Añadir Peso
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="md:col-span-4">
                         <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">URL de Imagen</label>
