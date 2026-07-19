@@ -86,6 +86,7 @@ export default function Admin() {
   const [newProductWeightNum, setNewProductWeightNum] = useState('');
   const [newProductWeightUnit, setNewProductWeightUnit] = useState('gr');
   const [newProductUsePreciosPorPeso, setNewProductUsePreciosPorPeso] = useState(false);
+  const [uploadingNewProduct, setUploadingNewProduct] = useState(false);
 
   // New news form state
   const [newArticle, setNewArticle] = useState({
@@ -248,6 +249,45 @@ export default function Admin() {
       toast.error('Error al subir imagen. Intenta de nuevo.');
     } finally {
       setUploadingId(null);
+    }
+  };
+
+  const handleNewProductImageUpload = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5 MB.');
+      return;
+    }
+    setUploadingNewProduct(true);
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: base64, folder: 'abunga-products' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Error al subir imagen.');
+        return;
+      }
+
+      setNewProduct(prev => ({ ...prev, image: data.url }));
+      toast.success('Imagen cargada con éxito para el nuevo producto.');
+    } catch (err) {
+      toast.error('Error al subir imagen. Intenta de nuevo.');
+    } finally {
+      setUploadingNewProduct(false);
     }
   };
 
@@ -682,91 +722,113 @@ export default function Admin() {
               <form onSubmit={handleAddProduct} className="bg-white rounded-3xl p-6 border-2 border-[#95b721] shadow-lg space-y-6">
                 <h3 className="text-lg font-black text-gray-800 border-b border-gray-100 pb-3">Nuevo Producto</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Nombre</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Plátano Deshidratado"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Tipo</label>
-                    <select
-                      value={newProduct.tipo}
-                      onChange={(e) => setNewProduct({ ...newProduct, tipo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Clickable image upload zone for new product */}
+                  <div className="flex flex-col items-center gap-1 shrink-0 w-full md:w-auto">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase self-start mb-1 block">Imagen</span>
+                    <label
+                      htmlFor="img-upload-new"
+                      className="relative w-28 h-28 bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer group hover:border-[#95b721] transition-all shadow-sm bg-white"
+                      title="Haz clic para subir imagen"
                     >
-                      <option value="Fruta">Fruta</option>
-                      <option value="Láminas">Láminas</option>
-                      <option value="Infusión">Infusión</option>
-                      <option value="Mix">Mix</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Fruta / Ingrediente Principal</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Plátano o Acaí"
-                      value={newProduct.fruta}
-                      onChange={(e) => setNewProduct({ ...newProduct, fruta: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">URL de Imagen (Cloudinary)</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. https://res.cloudinary.com/... (Dejar vacío para local fallback)"
-                      value={newProduct.image}
-                      onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-3">
-                    <input
-                      type="checkbox"
-                      id="newProductUsePreciosPorPeso"
-                      checked={newProductUsePreciosPorPeso}
-                      onChange={(e) => handleToggleNewProductPriceMode(e.target.checked)}
-                      className="h-4 w-4 text-[#95b721] border-gray-200 rounded-sm focus:ring-[#95b721] cursor-pointer"
-                    />
-                    <label htmlFor="newProductUsePreciosPorPeso" className="text-xs font-bold text-gray-700 cursor-pointer">
-                      Definir precios por peso (desactiva precio base)
+                      {uploadingNewProduct ? (
+                        <Loader2 className="h-8 w-8 text-[#95b721] animate-spin" />
+                      ) : newProduct.image ? (
+                        <img src={newProduct.image} alt="Nuevo Producto" className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <Globe className="h-10 w-10 text-gray-300 group-hover:text-[#95b721] transition-colors" />
+                      )}
+                      {!uploadingNewProduct && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 rounded-2xl">
+                          <Camera className="h-6 w-6 text-white" />
+                          <span className="text-white text-[9px] font-bold uppercase">Subir</span>
+                        </div>
+                      )}
+                      <input
+                        id="img-upload-new"
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => handleNewProductImageUpload(e.target.files[0])}
+                      />
                     </label>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Precio Base / Fijo (S/)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Ej. 10.00"
-                      value={newProduct.precio}
-                      disabled={newProductUsePreciosPorPeso}
-                      onChange={(e) => setNewProduct({ ...newProduct, precio: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721] disabled:bg-gray-100 disabled:text-gray-400"
-                    />
-                  </div>
+                  <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">Nombre</label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Plátano Deshidratado"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                        required
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Marca</label>
-                    <input
-                      type="text"
-                      placeholder="Abunga"
-                      value={newProduct.brand}
-                      onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                    />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">Tipo</label>
+                      <select
+                        value={newProduct.tipo}
+                        onChange={(e) => setNewProduct({ ...newProduct, tipo: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                      >
+                        <option value="Fruta">Fruta</option>
+                        <option value="Láminas">Láminas</option>
+                        <option value="Infusión">Infusión</option>
+                        <option value="Mix">Mix</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">Fruta / Ingrediente Principal</label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Plátano o Acaí"
+                        value={newProduct.fruta}
+                        onChange={(e) => setNewProduct({ ...newProduct, fruta: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 md:col-span-3 mt-2">
+                      <input
+                        type="checkbox"
+                        id="newProductUsePreciosPorPeso"
+                        checked={newProductUsePreciosPorPeso}
+                        onChange={(e) => handleToggleNewProductPriceMode(e.target.checked)}
+                        className="h-4 w-4 text-[#95b721] border-gray-200 rounded-sm focus:ring-[#95b721] cursor-pointer"
+                      />
+                      <label htmlFor="newProductUsePreciosPorPeso" className="text-xs font-bold text-gray-700 cursor-pointer">
+                        Definir precios por peso (desactiva precio base)
+                      </label>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">Precio Base / Fijo (S/)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ej. 10.00"
+                        value={newProduct.precio}
+                        disabled={newProductUsePreciosPorPeso}
+                        onChange={(e) => setNewProduct({ ...newProduct, precio: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721] disabled:bg-gray-100 disabled:text-gray-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">Marca</label>
+                      <input
+                        type="text"
+                        placeholder="Abunga"
+                        value={newProduct.brand}
+                        onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1048,16 +1110,6 @@ export default function Admin() {
                         </div>
                       )}
 
-                      <div className="md:col-span-4">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">URL de Imagen</label>
-                        <input
-                          type="text"
-                          placeholder="Image URL"
-                          value={product.image || ''}
-                          onChange={(e) => handleProductFieldChange(idx, 'image', e.target.value)}
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#95b721]"
-                        />
-                      </div>
                     </div>
 
                     {/* Actions and toggle */}
