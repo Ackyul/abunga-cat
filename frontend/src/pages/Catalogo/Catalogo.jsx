@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
 import { Link } from "react-router-dom";
+import { PRECIOS } from "../../lib/constants";
 
 const Catalogo = () => {
   const [isMixOpen, setIsMixOpen] = useState(false);
@@ -62,10 +63,11 @@ const Catalogo = () => {
                                 id: "mixtos-especial-mobile",
                                 name: "Mix de Frutas Deshidratadas",
                                 image: "/mixtos.png",
-                                price: 25,
+                                precio: 25,
                                 brand: "Abunga",
                                 tipo: "Mix",
-                                fruta: "Mix"
+                                fruta: "Mix",
+                                precios: PRECIOS["Mix"]
                             }} 
                             showActions={true}
                         />
@@ -97,10 +99,11 @@ const Catalogo = () => {
                                 id: "mixtos-especial-tablet",
                                 name: "Mix de Frutas Deshidratadas",
                                 image: "/mixtos.png",
-                                price: 25,
+                                precio: 25,
                                 brand: "Abunga",
                                 tipo: "Mix",
-                                fruta: "Mix"
+                                fruta: "Mix",
+                                precios: PRECIOS["Mix"]
                             }} 
                             showActions={true}
                         />
@@ -118,10 +121,11 @@ const Catalogo = () => {
                         id: "mixtos-especial",
                         name: "Mix de Frutas Deshidratadas",
                         image: "/mixtos.png",
-                        price: 25,
+                        precio: 25,
                         brand: "Abunga",
                         tipo: "Mix",
-                        fruta: "Mix"
+                        fruta: "Mix",
+                        precios: PRECIOS["Mix"]
                     }} 
                     showActions={true}
                 />
