@@ -7,14 +7,15 @@ import useCartStore from "../../stores/useCartStore";
 import { toast } from "sonner";
 import { 
   User, Mail, Phone, Calendar, LogOut, Loader2, Key, Check, 
-  Settings, Link2, Link2Off, Eye, EyeOff, AlertCircle, Package, ClipboardList, Clock, Truck, CheckCircle2
+  Settings, Link2, Link2Off, Eye, EyeOff, AlertCircle, Package, ClipboardList, Clock, Truck, CheckCircle2,
+  Gift, Sparkles, AlertTriangle, PartyPopper, X
 } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { 
-    user, loading, updateProfile, disconnectGoogle, logout, checkSession 
+    user, loading, updateProfile, disconnectGoogle, logout, checkSession, claimWelcomeGift 
   } = useAuthStore();
   const { cart } = useCartStore();
 
@@ -45,6 +46,12 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+
+  // Estados de Regalo de Bienvenida
+  const [showGiftCautionModal, setShowGiftCautionModal] = useState(false);
+  const [showGiftPrizeModal, setShowGiftPrizeModal] = useState(false);
+  const [wonPrize, setWonPrize] = useState("");
+  const [claimingGift, setClaimingGift] = useState(false);
 
   // Redireccionar si no está autenticado
   useEffect(() => {
@@ -248,6 +255,21 @@ const Profile = () => {
     }
   };
 
+  const handleConfirmClaimGift = async () => {
+    setClaimingGift(true);
+    try {
+      const data = await claimWelcomeGift();
+      setWonPrize(data.prize);
+      setShowGiftCautionModal(false);
+      setShowGiftPrizeModal(true);
+      toast.success("¡Regalo de bienvenida canjeado con éxito!");
+    } catch (err) {
+      toast.error(err.message || "Error al abrir el regalo.");
+    } finally {
+      setClaimingGift(false);
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center font-sans">
@@ -357,6 +379,40 @@ const Profile = () => {
                 </div>
               </div>
             </div>
+
+            {/* Tarjeta de Regalo de Bienvenida (Se oculta cuando welcome_gift es true) */}
+            {!user?.welcome_gift && (
+              <div className="bg-gradient-to-br from-[#95b721] via-[#82a319] to-[#6d8a14] rounded-3xl p-6 shadow-lg text-white relative overflow-hidden transition-all duration-300 hover:shadow-xl">
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-yellow-300/20 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-yellow-300 shadow-sm shrink-0">
+                    <Gift size={24} className="animate-bounce" />
+                  </div>
+                  <div>
+                    <span className="bg-yellow-300 text-black text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-xs">
+                      Exclusivo
+                    </span>
+                    <h3 className="text-lg font-extrabold font-capriola leading-tight mt-0.5 text-white">
+                      Regalo de Bienvenida
+                    </h3>
+                  </div>
+                </div>
+
+                <p className="text-xs text-lime-100 mb-5 leading-relaxed font-medium">
+                  ¡Gracias por registrarte en Abunga! Tienes 1 regalo sorpresa listo para canjear en la feria.
+                </p>
+
+                <button
+                  onClick={() => setShowGiftCautionModal(true)}
+                  className="w-full py-3 px-4 bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Sparkles size={18} className="text-amber-700" />
+                  <span>Abrir Mi Regalo</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Columna Derecha: Contenido Tabulado */}
@@ -853,6 +909,107 @@ const Profile = () => {
           </div>
         </div>
       </main>
+
+      {/* Modal de Precaución antes de abrir el regalo */}
+      {showGiftCautionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative border border-amber-100 text-center space-y-5">
+            <button
+              onClick={() => !claimingGift && setShowGiftCautionModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1 transition cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle size={34} />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-extrabold text-gray-900 font-capriola">
+                ⚠️ Precaución de Canje
+              </h3>
+              <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                Este regalo de bienvenida <strong className="text-amber-700 font-bold">solo se puede abrir 1 vez</strong> y <strong className="text-amber-700 font-bold">debe ser canjeado presencialmente en la feria</strong>.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200/70 rounded-2xl p-3.5 text-xs text-amber-800 font-medium">
+              ¿Estás listo para abrirlo y descubrir qué lámina ganaste?
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                disabled={claimingGift}
+                onClick={() => setShowGiftCautionModal(false)}
+                className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={claimingGift}
+                onClick={handleConfirmClaimGift}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-[#95b721] to-[#84a31d] hover:from-[#84a31d] hover:to-[#739019] text-white font-extrabold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {claimingGift ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Abriendo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Gift size={18} />
+                    <span>¡Sí, abrir mi regalo!</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Revelación del Premio Ganado */}
+      {showGiftPrizeModal && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative border-4 border-[#95b721]/30 text-center space-y-6 overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-3 bg-gradient-to-r from-yellow-400 via-[#95b721] to-emerald-400"></div>
+
+            <div className="w-20 h-20 bg-gradient-to-br from-yellow-100 to-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-md ring-8 ring-yellow-50">
+              <PartyPopper size={42} className="animate-bounce text-amber-500" />
+            </div>
+
+            <div>
+              <span className="text-xs font-black uppercase tracking-widest text-[#95b721] bg-[#95b721]/10 px-3 py-1 rounded-full">
+                🎉 ¡Felicidades!
+              </span>
+              <h3 className="text-2xl font-black text-gray-900 font-capriola mt-2">
+                ¡Has Ganado tu Regalo!
+              </h3>
+            </div>
+
+            <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 border-2 border-dashed border-amber-300 rounded-2xl p-5 shadow-xs">
+              <p className="text-xs uppercase font-bold text-amber-800 tracking-wider mb-1">Tu premio otorgado:</p>
+              <p className="text-2xl font-black text-amber-600 font-capriola drop-shadow-xs">
+                {wonPrize}
+              </p>
+            </div>
+
+            <p className="text-xs text-gray-500 leading-relaxed font-medium">
+              📍 Muestra este premio o tu pantalla en nuestro stand de la feria para realizar el canje presencial.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setShowGiftPrizeModal(false)}
+              className="w-full py-3 px-6 bg-[#95b721] hover:bg-[#84a31d] text-white font-extrabold text-sm rounded-2xl shadow-lg transition cursor-pointer hover:scale-[1.02]"
+            >
+              ¡Entendido!
+            </button>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
