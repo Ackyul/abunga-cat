@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     cart JSONB DEFAULT '[]'::jsonb,
+    welcome_gift BOOLEAN DEFAULT FALSE,
+    welcome_gift_prize VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

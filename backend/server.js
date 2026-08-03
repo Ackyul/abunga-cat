@@ -508,7 +508,7 @@ app.post('/api/users/register', async (req, res) => {
     const result = await sql`
       INSERT INTO usuarios (name, email, password_hash, phone, cart)
       VALUES (${cleanName}, ${cleanEmail}, ${passwordHash}, ${cleanPhone}, '[]'::jsonb)
-      RETURNING id, name, email, phone, google_email, cart, created_at
+      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
     `;
     
     const user = result[0];
@@ -576,7 +576,7 @@ app.get('/api/users/session', async (req, res) => {
     const session = verifyToken(token, jwtSecret);
     if (session && session.id) {
       try {
-        const users = await sql`SELECT id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud FROM usuarios WHERE id = ${session.id}`;
+        const users = await sql`SELECT id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud FROM usuarios WHERE id = ${session.id}`;
         if (users.length > 0) {
           return res.status(200).json({ authenticated: true, user: users[0] });
         }
@@ -853,7 +853,7 @@ app.get('/api/users/callback', async (req, res) => {
 
     // Flujo normal de login
     let users = await sql`
-      SELECT id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
+      SELECT id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
       FROM usuarios 
       WHERE email = ${cleanEmail} OR google_email = ${cleanEmail}
     `;
@@ -866,7 +866,7 @@ app.get('/api/users/callback', async (req, res) => {
       const insertResult = await sql`
         INSERT INTO usuarios (name, email, password_hash, google_email, cart)
         VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, ${cleanEmail}, '[]'::jsonb)
-        RETURNING id, name, email, phone, google_email, cart, created_at
+        RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
       `;
       user = insertResult[0];
     } else {
@@ -963,7 +963,7 @@ app.post('/api/users/update-profile', verifyUserSessionMiddleware, async (req, r
           latitud = ${numLat},
           longitud = ${numLng}
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
+      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
     `;
     if (result.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -982,7 +982,7 @@ app.post('/api/users/disconnect-google', verifyUserSessionMiddleware, async (req
       UPDATE usuarios
       SET google_email = NULL
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, created_at
+      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
     `;
     if (result.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -991,6 +991,40 @@ app.post('/api/users/disconnect-google', verifyUserSessionMiddleware, async (req
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error al desvincular Google.' });
+  }
+});
+
+// POST /api/users/claim-welcome-gift
+app.post('/api/users/claim-welcome-gift', verifyUserSessionMiddleware, async (req, res) => {
+  try {
+    const userResult = await sql`SELECT welcome_gift FROM usuarios WHERE id = ${req.userId}`;
+    if (userResult.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    if (userResult[0].welcome_gift) {
+      return res.status(400).json({ error: 'El regalo de bienvenida ya ha sido canjeado.' });
+    }
+
+    const gifts = [
+      '1 Lámina de Piña',
+      '1 Lámina de Papaya',
+      '1 Lámina de Sandía'
+    ];
+
+    const prize = gifts[Math.floor(Math.random() * gifts.length)];
+
+    const updateResult = await sql`
+      UPDATE usuarios
+      SET welcome_gift = TRUE, welcome_gift_prize = ${prize}
+      WHERE id = ${req.userId}
+      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
+    `;
+
+    return res.status(200).json({ success: true, prize, user: updateResult[0] });
+  } catch (err) {
+    console.error('Error al canjear regalo de bienvenida:', err);
+    return res.status(500).json({ error: 'Error al procesar el regalo de bienvenida.' });
   }
 });
 
