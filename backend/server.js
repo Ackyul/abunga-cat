@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import { promisify } from 'util';
 import { neon } from '@neondatabase/serverless';
 
 // Cargar variables de entorno
@@ -162,23 +163,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Endpoint de salud para keep-alive (evita sleep en Render Free)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Rate limiting simple en memoria para autenticación
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 function isRateLimited(ip, action) {
   const key = `${ip}:${action}`;
   const now = Date.now();
   const entry = rateLimitMap.get(key);
   
+  // Límites ajustados para eventos y ferias con redes WiFi y CGNAT celular compartidas
+  const maxAttemptsMap = {
+    register: 1000,
+    login: 1000,
+    forgot_password: 20,
+    reset_password: 20
+  };
+  const maxAttempts = maxAttemptsMap[action] || 50;
+
   if (!entry || now - entry.startTime > RATE_LIMIT_WINDOW_MS) {
     rateLimitMap.set(key, { startTime: now, count: 1 });
     return false;
   }
   
   entry.count++;
-  if (entry.count > RATE_LIMIT_MAX_ATTEMPTS) {
+  if (entry.count > maxAttempts) {
     return true;
   }
   return false;
@@ -221,22 +235,24 @@ function verifyToken(token, secret) {
   }
 }
 
-// PBKDF2 Hashing
-const PBKDF2_ITERATIONS = 310000;
+// PBKDF2 Hashing Asíncrono no bloqueante (libuv worker pool)
+const pbkdf2Async = promisify(crypto.pbkdf2);
+const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_KEYLEN = 64;
 const PBKDF2_DIGEST = 'sha512';
 
-function hashPassword(password) {
+async function hashPassword(password) {
   const salt = crypto.randomBytes(32).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST).toString('hex');
-  return `${salt}:${hash}`;
+  const derivedKey = await pbkdf2Async(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST);
+  return `${salt}:${derivedKey.toString('hex')}`;
 }
 
-function verifyPassword(password, storedPassword) {
+async function verifyPassword(password, storedPassword) {
   try {
     const [salt, hash] = storedPassword.split(':');
     if (!salt || !hash) return false;
-    const checkHash = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST).toString('hex');
+    const derivedKey = await pbkdf2Async(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST);
+    const checkHash = derivedKey.toString('hex');
     return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(checkHash, 'hex'));
   } catch (e) {
     return false;
@@ -504,7 +520,7 @@ app.post('/api/users/register', async (req, res) => {
       return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     const result = await sql`
       INSERT INTO usuarios (name, email, password_hash, phone, cart)
       VALUES (${cleanName}, ${cleanEmail}, ${passwordHash}, ${cleanPhone}, '[]'::jsonb)
@@ -542,12 +558,12 @@ app.post('/api/users/login', async (req, res) => {
   try {
     const users = await sql`SELECT * FROM usuarios WHERE email = ${cleanEmail}`;
     if (users.length === 0) {
-      hashPassword('dummy-password-timing-safe');
+      await hashPassword('dummy-password-timing-safe');
       return res.status(401).json({ error: 'Correo electrónico o contraseña incorrectos.' });
     }
 
     const user = users[0];
-    const isPasswordCorrect = verifyPassword(password, user.password_hash);
+    const isPasswordCorrect = await verifyPassword(password, user.password_hash);
     if (!isPasswordCorrect) {
       return res.status(401).json({ error: 'Correo electrónico o contraseña incorrectos.' });
     }
@@ -685,7 +701,7 @@ app.post('/api/users/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Código de verificación incorrecto.' });
     }
 
-    const passwordHash = hashPassword(newPassword);
+    const passwordHash = await hashPassword(newPassword);
     await sql`
       UPDATE usuarios 
       SET password_hash = ${passwordHash}, recovery_code = NULL, recovery_expires = NULL 
@@ -861,7 +877,7 @@ app.get('/api/users/callback', async (req, res) => {
 
     if (users.length === 0) {
       const cleanName = sanitizeString(userName).substring(0, 50);
-      const dummyPassword = hashPassword('oauth-google-' + crypto.randomBytes(16).toString('hex'));
+      const dummyPassword = await hashPassword('oauth-google-' + crypto.randomBytes(16).toString('hex'));
       
       const insertResult = await sql`
         INSERT INTO usuarios (name, email, password_hash, google_email, cart)
@@ -914,12 +930,12 @@ app.post('/api/users/change-password', verifyUserSessionMiddleware, async (req, 
     }
 
     const user = userResult[0];
-    const isPasswordCorrect = verifyPassword(currentPassword, user.password_hash);
+    const isPasswordCorrect = await verifyPassword(currentPassword, user.password_hash);
     if (!isPasswordCorrect) {
       return res.status(400).json({ error: 'La contraseña actual es incorrecta.' });
     }
 
-    const newHash = hashPassword(newPassword);
+    const newHash = await hashPassword(newPassword);
     await sql`UPDATE usuarios SET password_hash = ${newHash} WHERE id = ${req.userId}`;
 
     return res.status(200).json({ success: true, message: 'Contraseña actualizada con éxito.' });
