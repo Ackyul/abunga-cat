@@ -524,7 +524,7 @@ app.post('/api/users/register', async (req, res) => {
     const result = await sql`
       INSERT INTO usuarios (name, email, password_hash, phone, cart)
       VALUES (${cleanName}, ${cleanEmail}, ${passwordHash}, ${cleanPhone}, '[]'::jsonb)
-      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
+      RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at
     `;
     
     const user = result[0];
@@ -592,7 +592,7 @@ app.get('/api/users/session', async (req, res) => {
     const session = verifyToken(token, jwtSecret);
     if (session && session.id) {
       try {
-        const users = await sql`SELECT id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud FROM usuarios WHERE id = ${session.id}`;
+        const users = await sql`SELECT id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud FROM usuarios WHERE id = ${session.id}`;
         if (users.length > 0) {
           return res.status(200).json({ authenticated: true, user: users[0] });
         }
@@ -869,9 +869,9 @@ app.get('/api/users/callback', async (req, res) => {
 
     // Flujo normal de login
     let users = await sql`
-      SELECT id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
+      SELECT id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
       FROM usuarios 
-      WHERE email = ${cleanEmail} OR google_email = ${cleanEmail}
+      WHERE email = ${cleanEmail} OR google_email = ${cleanEmail} OR facebook_email = ${cleanEmail}
     `;
     let user;
 
@@ -882,7 +882,7 @@ app.get('/api/users/callback', async (req, res) => {
       const insertResult = await sql`
         INSERT INTO usuarios (name, email, password_hash, google_email, cart)
         VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, ${cleanEmail}, '[]'::jsonb)
-        RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
+        RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at
       `;
       user = insertResult[0];
     } else {
@@ -907,6 +907,187 @@ app.get('/api/users/callback', async (req, res) => {
     return res.status(500).json({ error: 'Error al iniciar sesión en la base de datos.' });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+//  FACEBOOK OAUTH FLUX
+// ═══════════════════════════════════════════════════════════════
+
+// GET /api/users/facebook -> Iniciar autenticación con Facebook
+app.get('/api/users/facebook', (req, res) => {
+  const { connect, returnTo } = req.query || {};
+  const appId = process.env.FACEBOOK_APP_ID;
+  const isLocalhost = req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1');
+
+  let connectUserId = null;
+  if (connect === 'true') {
+    const token = req.cookies.user_token;
+    if (token) {
+      const session = verifyToken(token, jwtSecret);
+      if (session && session.id) {
+        connectUserId = session.id;
+      }
+    }
+    if (!connectUserId) {
+      return res.status(401).json({ error: 'Debes iniciar sesión para conectar Facebook.' });
+    }
+  }
+
+  const stateToken = connectUserId ? `connect:${connectUserId}:${crypto.randomBytes(16).toString('hex')}` : crypto.randomBytes(32).toString('hex');
+
+  // Guardar URL de retorno
+  if (returnTo) {
+    res.cookie('oauth_facebook_return_to', returnTo, {
+      path: '/api/users/facebook/callback',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 600 * 1000
+    });
+  }
+
+  // Fallback si no hay appId en local dev (mock)
+  if (!appId && isLocalhost) {
+    const mockCallbackUrl = `${getBaseUrl(req)}/api/users/facebook/callback?code=mock_code&state=${stateToken}`;
+    res.cookie('oauth_facebook_state', stateToken, {
+      path: '/api/users/facebook/callback',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+      maxAge: 600 * 1000
+    });
+    return res.redirect(mockCallbackUrl);
+  }
+
+  if (!appId) {
+    return res.status(500).json({ error: 'Servicio de Facebook OAuth no configurado.' });
+  }
+
+  const redirectUri = encodeURIComponent(`${getBaseUrl(req)}/api/users/facebook/callback`);
+  const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=email,public_profile&state=${stateToken}`;
+
+  res.cookie('oauth_facebook_state', stateToken, {
+    path: '/api/users/facebook/callback',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax',
+    maxAge: 600 * 1000
+  });
+
+  res.redirect(facebookAuthUrl);
+});
+
+// GET /api/users/facebook/callback -> Callback de Facebook OAuth
+app.get('/api/users/facebook/callback', async (req, res) => {
+  const { code, state } = req.query || {};
+  if (!code) {
+    return res.status(400).json({ error: 'Código de autorización de Facebook faltante.' });
+  }
+
+  const storedState = req.cookies.oauth_facebook_state;
+  if (!state || !storedState || state !== storedState) {
+    console.warn('⚠️ Facebook OAuth CSRF detectado.');
+    return res.status(403).json({ error: 'Validación de seguridad fallida.' });
+  }
+
+  res.clearCookie('oauth_facebook_state', { path: '/api/users/facebook/callback' });
+
+  let userName = '';
+  let userEmail = '';
+
+  const isLocalhost = req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1');
+  const appId = process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
+
+  if (code === 'mock_code' && isLocalhost && (!appId || !appSecret)) {
+    userName = 'Usuario Facebook Test';
+    userEmail = 'test-facebook@example.com';
+  } else {
+    if (!appId || !appSecret) {
+      return res.status(500).json({ error: 'Configuración de Facebook OAuth incompleta en el servidor.' });
+    }
+
+    const redirectUri = `${getBaseUrl(req)}/api/users/facebook/callback`;
+
+    try {
+      const tokenUrl = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}`;
+      const tokenResponse = await fetch(tokenUrl);
+      const tokenData = await tokenResponse.json();
+
+      if (!tokenData.access_token) {
+        console.error('Facebook Token Error:', tokenData);
+        return res.status(401).json({ error: 'Fallo en la autenticación de Facebook.' });
+      }
+
+      const userUrl = `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${tokenData.access_token}`;
+      const userResponse = await fetch(userUrl);
+      const userData = await userResponse.json();
+
+      userName = userData.name || 'Usuario de Facebook';
+      userEmail = userData.email || `${userData.id}@facebook.com`;
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error de red durante la autenticación con Facebook.' });
+    }
+  }
+
+  try {
+    const cleanEmail = userEmail.toLowerCase();
+
+    if (state && state.startsWith('connect:')) {
+      const parts = state.split(':');
+      const userId = parseInt(parts[1], 10);
+
+      const existingFbUser = await sql`SELECT id FROM usuarios WHERE facebook_email = ${cleanEmail} AND id != ${userId}`;
+      if (existingFbUser.length > 0) {
+        return res.redirect(`${getBaseUrl(req)}/profile?connect_error=facebook_already_linked`);
+      }
+
+      await sql`UPDATE usuarios SET facebook_email = ${cleanEmail} WHERE id = ${userId}`;
+      return res.redirect(`${getBaseUrl(req)}/profile?connect_facebook_success=true`);
+    }
+
+    let users = await sql`
+      SELECT id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud 
+      FROM usuarios 
+      WHERE email = ${cleanEmail} OR facebook_email = ${cleanEmail} OR google_email = ${cleanEmail}
+    `;
+    let user;
+
+    if (users.length === 0) {
+      const cleanName = sanitizeString(userName).substring(0, 50);
+      const dummyPassword = await hashPassword('oauth-facebook-' + crypto.randomBytes(16).toString('hex'));
+
+      const insertResult = await sql`
+        INSERT INTO usuarios (name, email, password_hash, facebook_email, cart)
+        VALUES (${cleanName}, ${cleanEmail}, ${dummyPassword}, ${cleanEmail}, '[]'::jsonb)
+        RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at
+      `;
+      user = insertResult[0];
+    } else {
+      user = users[0];
+      if (!user.facebook_email) {
+        await sql`UPDATE usuarios SET facebook_email = ${cleanEmail} WHERE id = ${user.id}`;
+        user.facebook_email = cleanEmail;
+      }
+    }
+
+    const token = signToken({ id: user.id, email: user.email, iat: Date.now(), exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }, jwtSecret);
+    setCookie(res, 'user_token', token, 2592000);
+
+    let returnTo = req.cookies.oauth_facebook_return_to || '/profile';
+    res.clearCookie('oauth_facebook_return_to', { path: '/api/users/facebook/callback' });
+
+    if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+      returnTo = '/profile';
+    }
+
+    res.redirect(`${getBaseUrl(req)}${returnTo}`);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al iniciar sesión con Facebook en la base de datos.' });
+  }
+});
+
 
 // ═══════════════════════════════════════════════════════════════
 //  OPERACIONES LOGUEADAS DE CLIENTE (CON MIDDLEWARE)
@@ -979,7 +1160,7 @@ app.post('/api/users/update-profile', verifyUserSessionMiddleware, async (req, r
           latitud = ${numLat},
           longitud = ${numLng}
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
+      RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
     `;
     if (result.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -998,7 +1179,7 @@ app.post('/api/users/disconnect-google', verifyUserSessionMiddleware, async (req
       UPDATE usuarios
       SET google_email = NULL
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at
+      RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at
     `;
     if (result.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -1007,6 +1188,25 @@ app.post('/api/users/disconnect-google', verifyUserSessionMiddleware, async (req
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error al desvincular Google.' });
+  }
+});
+
+// POST /api/users/disconnect-facebook
+app.post('/api/users/disconnect-facebook', verifyUserSessionMiddleware, async (req, res) => {
+  try {
+    const result = await sql`
+      UPDATE usuarios
+      SET facebook_email = NULL
+      WHERE id = ${req.userId}
+      RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at
+    `;
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+    return res.status(200).json({ success: true, user: result[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al desvincular Facebook.' });
   }
 });
 
@@ -1034,7 +1234,7 @@ app.post('/api/users/claim-welcome-gift', verifyUserSessionMiddleware, async (re
       UPDATE usuarios
       SET welcome_gift = TRUE, welcome_gift_prize = ${prize}
       WHERE id = ${req.userId}
-      RETURNING id, name, email, phone, google_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
+      RETURNING id, name, email, phone, google_email, facebook_email, cart, welcome_gift, welcome_gift_prize, created_at, ciudad, region, distrito, direccion, referencia, latitud, longitud
     `;
 
     return res.status(200).json({ success: true, prize, user: updateResult[0] });

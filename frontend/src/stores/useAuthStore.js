@@ -148,6 +148,28 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Desvincular Facebook
+  disconnectFacebook: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch('/api/users/disconnect-facebook', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al desvincular Facebook');
+      }
+
+      set({ user: data.user, loading: false });
+      return data.user;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
+  },
+
+
   // Canjear Regalo de Bienvenida
   claimWelcomeGift: async () => {
     set({ loading: true, error: null });
