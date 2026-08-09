@@ -963,7 +963,8 @@ app.get('/api/users/facebook', (req, res) => {
   }
 
   const redirectUri = encodeURIComponent(`${getBaseUrl(req)}/api/users/facebook/callback`);
-  const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=email,public_profile&state=${stateToken}`;
+  const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=public_profile&state=${stateToken}`;
+
 
   res.cookie('oauth_facebook_state', stateToken, {
     path: '/api/users/facebook/callback',
