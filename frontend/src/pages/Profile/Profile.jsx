@@ -830,9 +830,7 @@ const Profile = () => {
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900">Google OAuth</h4>
                           <p className="text-xs text-gray-600">
-                            {user?.google_email 
-                              ? `Conectado como ${user.google_email}` 
-                              : "No conectado"}
+                            {user?.google_email ? "Conectado" : "No conectado"}
                           </p>
                         </div>
                       </div>
@@ -865,11 +863,10 @@ const Profile = () => {
                         <div>
                           <h4 className="text-sm font-semibold text-gray-900">Facebook OAuth</h4>
                           <p className="text-xs text-gray-600">
-                            {user?.facebook_email 
-                              ? `Conectado como ${user.facebook_email}` 
-                              : "No conectado"}
+                            {user?.facebook_email ? "Conectado" : "No conectado"}
                           </p>
                         </div>
+
                       </div>
 
                       {user?.facebook_email ? (
