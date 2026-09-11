@@ -157,7 +157,7 @@ app.use(cookieParser());
 // Cabeceras de seguridad personalizadas
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://ackyul.github.io https://*.github.io;");
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   next();
