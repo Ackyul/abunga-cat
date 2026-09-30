@@ -2234,7 +2234,12 @@ _El repartidor llamará al teléfono del taller (${process.env.RECOJO_PHONE || '
 //  INICIALIZACIÓN DEL SERVIDOR
 // ═══════════════════════════════════════════════════════════════
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor backend Express ejecutándose en http://localhost:${PORT}`);
-  console.log(`🔒 Entorno: ${process.env.NODE_ENV || 'development'}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor backend Express ejecutándose en http://localhost:${PORT}`);
+    console.log(`🔒 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+export default app;
+
