@@ -13,12 +13,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuración de la base de datos
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || '';
 if (!databaseUrl) {
-  console.error('❌ CRITICAL ERROR: DATABASE_URL no está configurada.');
-  process.exit(1);
+  console.error('⚠️ WARNING: DATABASE_URL no está configurada en las variables de entorno.');
 }
-const rawSql = neon(databaseUrl);
+const rawSql = databaseUrl ? neon(databaseUrl) : null;
+
 
 // Clase para encolar operaciones secuencialmente y evitar condiciones de carrera o sobrecarga en la DB
 class RequestQueue {
@@ -100,6 +100,9 @@ const sql = async (strings, ...values) => {
     return clean.startsWith('INSERT') || clean.startsWith('UPDATE') || clean.startsWith('DELETE');
   };
 
+  if (!rawSql) {
+    throw new Error('DATABASE_URL no está configurada en las variables de entorno de Vercel.');
+  }
   const operation = () => executeSafeSql(() => rawSql(strings, ...values));
   
   if (isWriteQuery()) {
@@ -109,11 +112,11 @@ const sql = async (strings, ...values) => {
 };
 
 // Configuración de JWT
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-  console.error('❌ CRITICAL ERROR: JWT_SECRET no está configurada.');
-  process.exit(1);
+const jwtSecret = process.env.JWT_SECRET || 'abunga-secure-session-secret-key-987654321';
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ WARNING: JWT_SECRET no está configurada, usando clave por defecto.');
 }
+
 
 // Helper para obtener la URL base de frontend de forma robusta
 function getBaseUrl(req) {
