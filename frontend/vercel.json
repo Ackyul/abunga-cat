@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://abunga-cat.onrender.com/api/:path*"
+      "destination": "https://api.abungasaborqueretumba.com/api/:path*"
     },
     {
       "source": "/(.*)",
