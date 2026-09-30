@@ -1415,9 +1415,10 @@ app.get('/api/news', async (req, res) => {
     return res.status(200).json(news);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error al obtener novedades.' });
+    return res.status(500).json({ error: 'Error al obtener novedades.', details: err.message });
   }
 });
+
 
 // POST /api/news (Admin only)
 app.post('/api/news', verifySessionMiddleware, async (req, res) => {
