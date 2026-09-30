@@ -145,13 +145,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (
+      !origin ||
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.abungasaborqueretumba.com')
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Bloqueado por CORS: origen no permitido.'));
     }
   },
   credentials: true
+
 }));
 
 app.use(express.json({ limit: '10mb' })); // Permitir imágenes base64 grandes en uploads
