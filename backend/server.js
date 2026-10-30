@@ -123,12 +123,25 @@ function getBaseUrl(req) {
   if (process.env.FRONTEND_URL) {
     return process.env.FRONTEND_URL.replace(/\/$/, '');
   }
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  let host = req.headers['x-forwarded-host'] || req.headers.host;
+  const protocol = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https';
+  let host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || '';
   if (host && host.includes(',')) {
     host = host.split(',')[0].trim();
   }
+  // Si el host detectado es el subdominio del API, el frontend real vive en www
+  if (host === 'api.abungasaborqueretumba.com') {
+    return `${protocol}://www.abungasaborqueretumba.com`;
+  }
   return `${protocol}://${host}`;
+}
+
+// Helper para compartir cookies entre subdominios en producción (.abungasaborqueretumba.com)
+function getCookieDomain(req) {
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || '';
+  if (host.includes('abungasaborqueretumba.com')) {
+    return '.abungasaborqueretumba.com';
+  }
+  return undefined;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -345,15 +358,20 @@ function verifyUserSessionMiddleware(req, res, next) {
 }
 
 // Helper para cookies en local vs prod
-function setCookie(res, name, value, maxAge, path = '/') {
+function setCookie(res, name, value, maxAge, path = '/', req = null) {
   const secure = process.env.NODE_ENV === 'production';
-  res.cookie(name, value, {
+  const cookieOpts = {
     path,
     httpOnly: true,
     secure,
-    sameSite: secure ? 'Strict' : 'Lax',
+    sameSite: 'Lax',
     maxAge: maxAge * 1000
-  });
+  };
+  const domain = getCookieDomain(req);
+  if (domain) {
+    cookieOpts.domain = domain;
+  }
+  res.cookie(name, value, cookieOpts);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -379,7 +397,10 @@ app.post('/api/auth/login', (req, res) => {
 
 // POST /api/auth/logout
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('admin_token', { path: '/' });
+  const clearOpts = { path: '/' };
+  const domain = getCookieDomain(req);
+  if (domain) clearOpts.domain = domain;
+  res.clearCookie('admin_token', clearOpts);
   return res.status(200).json({ success: true });
 });
 
@@ -395,13 +416,17 @@ app.get('/api/auth/google', (req, res) => {
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=${stateToken}`;
   
-  res.cookie('admin_oauth_state', stateToken, {
-    path: '/api/auth/callback',
+  const cookieOpts = {
+    path: '/',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Lax',
     maxAge: 600 * 1000
-  });
+  };
+  const domain = getCookieDomain(req);
+  if (domain) cookieOpts.domain = domain;
+
+  res.cookie('admin_oauth_state', stateToken, cookieOpts);
   
   res.redirect(googleAuthUrl);
 });
@@ -418,7 +443,10 @@ app.get('/api/auth/callback', async (req, res) => {
     return res.status(403).json({ error: 'Validación de seguridad fallida.' });
   }
 
-  res.clearCookie('admin_oauth_state', { path: '/api/auth/callback' });
+  const clearOpts = { path: '/' };
+  const domain = getCookieDomain(req);
+  if (domain) clearOpts.domain = domain;
+  res.clearCookie('admin_oauth_state', clearOpts);
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -485,7 +513,7 @@ app.get('/api/auth/callback', async (req, res) => {
       exp: Date.now() + 24 * 60 * 60 * 1000
     }, jwtSecret);
 
-    setCookie(res, 'admin_token', token, 86400);
+    setCookie(res, 'admin_token', token, 86400, '/', req);
     res.redirect(`${getBaseUrl(req)}/admin`);
   } catch (err) {
     console.error('OAuth Callback Error:', err);
@@ -746,15 +774,19 @@ app.get('/api/users/google', (req, res) => {
 
   const stateToken = connectUserId ? `connect:${connectUserId}:${crypto.randomBytes(16).toString('hex')}` : crypto.randomBytes(32).toString('hex');
 
+  const domain = getCookieDomain(req);
+  const cookieBaseOpts = {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax',
+    maxAge: 600 * 1000
+  };
+  if (domain) cookieBaseOpts.domain = domain;
+
   // Guardar la URL de retorno en una cookie si existe
   if (returnTo) {
-    res.cookie('oauth_return_to', returnTo, {
-      path: '/api/users/callback',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 600 * 1000
-    });
+    res.cookie('oauth_return_to', returnTo, cookieBaseOpts);
   }
 
   // Si no hay clientId en local dev, redirige inmediatamente con mock parameters para facilitar desarrollo local
@@ -762,11 +794,8 @@ app.get('/api/users/google', (req, res) => {
     const mockCallbackUrl = `${getBaseUrl(req)}/api/users/callback?code=mock_code&state=${stateToken}`;
     
     res.cookie('oauth_state', stateToken, {
-      path: '/api/users/callback',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-      maxAge: 600 * 1000
+      ...cookieBaseOpts,
+      secure: false
     });
     
     return res.redirect(mockCallbackUrl);
@@ -780,13 +809,7 @@ app.get('/api/users/google', (req, res) => {
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=${stateToken}`;
   
-  res.cookie('oauth_state', stateToken, {
-    path: '/api/users/callback',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
-    maxAge: 600 * 1000
-  });
+  res.cookie('oauth_state', stateToken, cookieBaseOpts);
   
   res.redirect(googleAuthUrl);
 });
@@ -804,7 +827,10 @@ app.get('/api/users/callback', async (req, res) => {
     return res.status(403).json({ error: 'Validación de seguridad fallida.' });
   }
 
-  res.clearCookie('oauth_state', { path: '/api/users/callback' });
+  const clearOpts = { path: '/' };
+  const domain = getCookieDomain(req);
+  if (domain) clearOpts.domain = domain;
+  res.clearCookie('oauth_state', clearOpts);
 
   let userName = '';
   let userEmail = '';
@@ -899,11 +925,13 @@ app.get('/api/users/callback', async (req, res) => {
     }
 
     const token = signToken({ id: user.id, email: user.email, iat: Date.now(), exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }, jwtSecret);
-    setCookie(res, 'user_token', token, 2592000);
+    setCookie(res, 'user_token', token, 2592000, '/', req);
     
     // Leer y limpiar cookie de retorno
     let returnTo = req.cookies.oauth_return_to || '/profile';
-    res.clearCookie('oauth_return_to', { path: '/api/users/callback' });
+    const clearReturnOpts = { path: '/' };
+    if (domain) clearReturnOpts.domain = domain;
+    res.clearCookie('oauth_return_to', clearReturnOpts);
 
     // Evitar vulnerabilidad de redirección abierta
     if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
@@ -943,26 +971,27 @@ app.get('/api/users/facebook', (req, res) => {
 
   const stateToken = connectUserId ? `connect:${connectUserId}:${crypto.randomBytes(16).toString('hex')}` : crypto.randomBytes(32).toString('hex');
 
+  const domain = getCookieDomain(req);
+  const cookieBaseOpts = {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax',
+    maxAge: 600 * 1000
+  };
+  if (domain) cookieBaseOpts.domain = domain;
+
   // Guardar URL de retorno
   if (returnTo) {
-    res.cookie('oauth_facebook_return_to', returnTo, {
-      path: '/api/users/facebook/callback',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 600 * 1000
-    });
+    res.cookie('oauth_facebook_return_to', returnTo, cookieBaseOpts);
   }
 
   // Fallback si no hay appId en local dev (mock)
   if (!appId && isLocalhost) {
     const mockCallbackUrl = `${getBaseUrl(req)}/api/users/facebook/callback?code=mock_code&state=${stateToken}`;
     res.cookie('oauth_facebook_state', stateToken, {
-      path: '/api/users/facebook/callback',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-      maxAge: 600 * 1000
+      ...cookieBaseOpts,
+      secure: false
     });
     return res.redirect(mockCallbackUrl);
   }
@@ -974,14 +1003,7 @@ app.get('/api/users/facebook', (req, res) => {
   const redirectUri = encodeURIComponent(`${getBaseUrl(req)}/api/users/facebook/callback`);
   const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=public_profile&state=${stateToken}`;
 
-
-  res.cookie('oauth_facebook_state', stateToken, {
-    path: '/api/users/facebook/callback',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
-    maxAge: 600 * 1000
-  });
+  res.cookie('oauth_facebook_state', stateToken, cookieBaseOpts);
 
   res.redirect(facebookAuthUrl);
 });
@@ -999,7 +1021,10 @@ app.get('/api/users/facebook/callback', async (req, res) => {
     return res.status(403).json({ error: 'Validación de seguridad fallida.' });
   }
 
-  res.clearCookie('oauth_facebook_state', { path: '/api/users/facebook/callback' });
+  const clearOpts = { path: '/' };
+  const domain = getCookieDomain(req);
+  if (domain) clearOpts.domain = domain;
+  res.clearCookie('oauth_facebook_state', clearOpts);
 
   let userName = '';
   let userEmail = '';
@@ -1082,10 +1107,12 @@ app.get('/api/users/facebook/callback', async (req, res) => {
     }
 
     const token = signToken({ id: user.id, email: user.email, iat: Date.now(), exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }, jwtSecret);
-    setCookie(res, 'user_token', token, 2592000);
+    setCookie(res, 'user_token', token, 2592000, '/', req);
 
     let returnTo = req.cookies.oauth_facebook_return_to || '/profile';
-    res.clearCookie('oauth_facebook_return_to', { path: '/api/users/facebook/callback' });
+    const clearReturnOpts = { path: '/' };
+    if (domain) clearReturnOpts.domain = domain;
+    res.clearCookie('oauth_facebook_return_to', clearReturnOpts);
 
     if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
       returnTo = '/profile';
