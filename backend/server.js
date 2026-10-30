@@ -486,21 +486,24 @@ app.get('/api/auth/callback', async (req, res) => {
       return res.status(400).json({ error: 'No se pudo obtener el correo.' });
     }
 
-    // Doble verificación de seguridad: Env y correo hardcodeado + cuenta verificada por Google
-    const allowedAdminEmail = "949237217yoshua@gmail.com";
-    const isEmailVerified = userData.email_verified === true || userData.email_verified === 'true';
+    // Verificación de seguridad: Cuentas autorizadas + correo verificado por Google
+    const allowedAdminEmails = [
+      "949237217yoshua@gmail.com",
+      "yoshua949237217@gmail.com"
+    ];
+    if (adminEmail) {
+      allowedAdminEmails.push(adminEmail.toLowerCase().trim());
+    }
 
-    if (
-      !isEmailVerified ||
-      !adminEmail ||
-      userEmail.toLowerCase() !== adminEmail.toLowerCase() ||
-      userEmail.toLowerCase() !== allowedAdminEmail.toLowerCase()
-    ) {
+    const isEmailVerified = userData.email_verified === true || userData.email_verified === 'true';
+    const isAuthorized = isEmailVerified && allowedAdminEmails.includes(userEmail.toLowerCase().trim());
+
+    if (!isAuthorized) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.status(403).end(`
         <div style="font-family:sans-serif; text-align:center; padding:50px;">
           <h1>Acceso Denegado</h1>
-          <p>La cuenta no está autorizada para administrar este sitio o el correo no está verificado.</p>
+          <p>La cuenta (${userEmail}) no está autorizada para administrar este sitio o el correo no está verificado.</p>
           <a href="${getBaseUrl(req)}/admin">Volver</a>
         </div>
       `);
