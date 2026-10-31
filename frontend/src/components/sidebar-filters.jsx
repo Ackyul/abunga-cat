@@ -22,6 +22,8 @@ export function SidebarFilters() {
         return products.some(p => {
           const typeMatch = filters.types.some(t => {
             if (t === 'Laminas') return p.tipo?.includes('Láminas');
+            if (t === 'Liofilizado') return p.tipo?.toLowerCase().includes('liofilizado');
+            if (t === 'Fusión') return p.tipo?.toLowerCase().includes('fusi');
             if (t === 'Infusiones') return (
               p.tipo?.toLowerCase().startsWith('infusi') ||
               p.name?.toLowerCase().includes('ritual')
@@ -75,6 +77,24 @@ export function SidebarFilters() {
                 className="h-6 w-6"
                 checked={filters.types.includes('Laminas')}
                 onCheckedChange={() => handleTypeChange('Laminas')}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="liofilizado-tipo" className="text-lg">Liofilizado</Label>
+              <Checkbox 
+                id="liofilizado-tipo" 
+                className="h-6 w-6"
+                checked={filters.types.includes('Liofilizado')}
+                onCheckedChange={() => handleTypeChange('Liofilizado')}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="fusion-tipo" className="text-lg">Fusión</Label>
+              <Checkbox 
+                id="fusion-tipo" 
+                className="h-6 w-6"
+                checked={filters.types.includes('Fusión')}
+                onCheckedChange={() => handleTypeChange('Fusión')}
               />
             </div>
             <div className="flex items-center justify-between gap-3">

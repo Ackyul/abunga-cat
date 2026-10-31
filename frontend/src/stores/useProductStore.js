@@ -38,7 +38,7 @@ const useProductStore = create((set, get) => ({
         let newImage = hasExternalImage ? originalImage : null;
 
         if (!hasExternalImage) {
-          if (p.tipo === "Fruta") {
+          if (p.tipo === "Fruta" || p.tipo === "Liofilizado" || p.tipo === "Fusión") {
             if (fruta === "Piña") newImage = "/f-pina.png";
             else if (fruta === "Mango") newImage = "/f-mango.png";
             else if (fruta === "Naranja") newImage = "/f-naranja.png";
@@ -105,7 +105,9 @@ const useProductStore = create((set, get) => ({
       const typeMatch =
         filters.types.length === 0 ||
         filters.types.some((filterType) => {
-          if (filterType === "Laminas") return product.tipo.includes("Láminas");
+          if (filterType === "Laminas") return product.tipo?.includes("Láminas");
+          if (filterType === "Liofilizado") return product.tipo?.toLowerCase().includes("liofilizado");
+          if (filterType === "Fusión") return product.tipo?.toLowerCase().includes("fusi");
           if (filterType === "Infusiones") return product.tipo === "Infusión" || product.tipo === "Infusiones" || product.tipo?.toLowerCase().includes("infusion");
           return product.tipo === filterType;
         });

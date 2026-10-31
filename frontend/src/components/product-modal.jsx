@@ -219,9 +219,13 @@ export function ProductModal({ product, isOpen, onClose }) {
                 <p className="text-gray-500 mt-2 md:mt-4 text-xs md:text-base leading-relaxed">
                     {isRitual
                         ? "Infusión herbal 100% natural, elaborada con ingredientes seleccionados para relajar tu mente y despertar tu energía. Sin colorantes ni conservantes."
-                        : product.tipo.includes("Láminas") 
-                            ? "Deliciosas láminas de fruta deshidratada 100% natural, sin azúcares añadidos ni conservantes. Perfecta para un snack saludable en cualquier momento del día."
-                            : "Deliciosa fruta deshidratada 100% natural, sin azúcares añadidos ni conservantes. Perfecta para un snack saludable en cualquier momento del día."
+                        : product.tipo?.toLowerCase().includes("liofilizado")
+                            ? "Snack liofilizado 100% natural, conservando todo el sabor, nutrientes y textura crujiente de la fruta."
+                            : product.tipo?.toLowerCase().includes("fusi")
+                                ? "Fusión natural única, combinando los mejores sabores y nutrientes para deleitar tu paladar."
+                                : product.tipo?.includes("Láminas") 
+                                    ? "Deliciosas láminas de fruta deshidratada 100% natural, sin azúcares añadidos ni conservantes. Perfecta para un snack saludable en cualquier momento del día."
+                                    : "Deliciosa fruta deshidratada 100% natural, sin azúcares añadidos ni conservantes. Perfecta para un snack saludable en cualquier momento del día."
                     }
                 </p>
             </div>

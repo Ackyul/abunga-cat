@@ -20,6 +20,8 @@ export function MobileFilters() {
         return products.some(p => {
           const typeMatch = filters.types.some(t => {
             if (t === 'Laminas') return p.tipo?.includes('Láminas');
+            if (t === 'Liofilizado') return p.tipo?.toLowerCase().includes('liofilizado');
+            if (t === 'Fusión') return p.tipo?.toLowerCase().includes('fusi');
             if (t === 'Infusiones') return (
               p.tipo?.toLowerCase().startsWith('infusi') ||
               p.name?.toLowerCase().includes('ritual')
@@ -74,6 +76,24 @@ export function MobileFilters() {
                     onCheckedChange={() => handleTypeChange('Fruta')}
                   />
                   <Label htmlFor="mobile-fruta" className="text-base font-medium text-gray-700">Fruta</Label>
+                </div>
+                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                  <Checkbox 
+                    id="mobile-liofilizado" 
+                    className="h-5 w-5"
+                    checked={filters.types.includes('Liofilizado')}
+                    onCheckedChange={() => handleTypeChange('Liofilizado')}
+                  />
+                  <Label htmlFor="mobile-liofilizado" className="text-base font-medium text-gray-700">Liofilizado</Label>
+                </div>
+                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                  <Checkbox 
+                    id="mobile-fusion" 
+                    className="h-5 w-5"
+                    checked={filters.types.includes('Fusión')}
+                    onCheckedChange={() => handleTypeChange('Fusión')}
+                  />
+                  <Label htmlFor="mobile-fusion" className="text-base font-medium text-gray-700">Fusión</Label>
                 </div>
                 <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg col-span-2">
                   <Checkbox 

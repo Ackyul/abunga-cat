@@ -21,7 +21,7 @@ const getProductImage = (product) => {
   if (hasExternalImage) return originalImage;
 
   const fruta = product.fruta === "Asaí" ? "Acaí" : product.fruta;
-  if (product.tipo === "Fruta") {
+  if (product.tipo === "Fruta" || product.tipo === "Liofilizado" || product.tipo === "Fusión") {
     if (fruta === "Piña") return "/f-pina.png";
     if (fruta === "Mango") return "/f-mango.png";
     if (fruta === "Naranja") return "/f-naranja.png";
@@ -776,6 +776,8 @@ export default function Admin() {
                       >
                         <option value="Fruta">Fruta</option>
                         <option value="Láminas">Láminas</option>
+                        <option value="Liofilizado">Liofilizado</option>
+                        <option value="Fusión">Fusión</option>
                         <option value="Infusión">Infusión</option>
                         <option value="Mix">Mix</option>
                       </select>
@@ -1007,6 +1009,8 @@ export default function Admin() {
                         >
                           <option value="Fruta">Fruta</option>
                           <option value="Láminas">Láminas</option>
+                          <option value="Liofilizado">Liofilizado</option>
+                          <option value="Fusión">Fusión</option>
                           <option value="Infusión">Infusión</option>
                           <option value="Mix">Mix</option>
                         </select>
