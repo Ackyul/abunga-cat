@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { cn, sortWeights } from "../lib/utils";
+import { cn, sortWeights, getProductSizeImage } from "../lib/utils";
 import { Button } from "./ui/button";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
@@ -131,6 +131,7 @@ export function ProductModal({ product, isOpen, onClose }) {
     return 10;
   };
 
+  const modalImage = getProductSizeImage(product, selectedWeight);
   const displayPrice = getPrice();
 
   const nameLow2 = product.name?.toLowerCase() || "";
@@ -150,7 +151,7 @@ export function ProductModal({ product, isOpen, onClose }) {
       });
       return;
     }
-    addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
+    addToCart({ id: product.id, name: product.name, image: modalImage, price: displayPrice, brand: product.brand }, 1, selectedWeight);
   };
   
   const handleIncrease = () => {
@@ -194,7 +195,7 @@ export function ProductModal({ product, isOpen, onClose }) {
           }
         >
              <img 
-               src={product.image} 
+               src={modalImage} 
                alt={product.name} 
                className={cn(
                  "max-h-full max-w-full object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-105",

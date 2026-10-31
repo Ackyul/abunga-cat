@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS productos (
     image TEXT,
     precio NUMERIC(10, 2),
     precios JSONB,
+    images JSONB DEFAULT '{}'::jsonb,
     brand VARCHAR(255) DEFAULT 'Abunga',
     visible BOOLEAN DEFAULT TRUE
 );

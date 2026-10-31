@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
-import { cn } from "../lib/utils";
+import { cn, getProductSizeImage } from "../lib/utils";
+import useProductStore from "../stores/useProductStore";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +21,13 @@ export function MixtoBuilder() {
     const { addToCart } = useCartStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
+    const { products } = useProductStore();
+    const mixProduct = products.find(p => p.tipo === "Mix" || p.name?.toLowerCase().includes("mix"));
+
+    let dbPrecios = mixProduct?.precios;
+    if (typeof dbPrecios === 'string') {
+      try { dbPrecios = JSON.parse(dbPrecios); } catch { dbPrecios = {}; }
+    }
 
     const prices = {
         "50gr": 20,
@@ -50,7 +58,7 @@ export function MixtoBuilder() {
             id: `mixto-${Date.now()}`,
             name: "Mixto Fruta Deshidratada",
             price: prices[selectedSize],
-            image: "/logo-abunga.png", 
+            image: sizeImage, 
             brand: "Abunga",
             fruits: selectedFruits
         };

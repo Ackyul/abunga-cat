@@ -6,6 +6,15 @@ import { Loader2, Lock, LogOut, CheckCircle, Eye, EyeOff, Plus, Trash2, Save, Fi
 import BannerGenerator from '../../components/banner-generator';
 import { sortWeights } from '../../lib/utils';
 
+const getProductImages = (product) => {
+  if (!product) return {};
+  let imgs = product.images;
+  if (typeof imgs === 'string') {
+    try { imgs = JSON.parse(imgs); } catch { imgs = {}; }
+  }
+  return imgs && typeof imgs === 'object' ? imgs : {};
+};
+
 const getProductImage = (product) => {
   if (!product) return '';
   const originalImage = product.image;
@@ -87,6 +96,7 @@ export default function Admin() {
   const [newProductWeightUnit, setNewProductWeightUnit] = useState('gr');
   const [newProductUsePreciosPorPeso, setNewProductUsePreciosPorPeso] = useState(false);
   const [uploadingNewProduct, setUploadingNewProduct] = useState(false);
+  const [uploadingWeightKey, setUploadingWeightKey] = useState(null);
 
   // New news form state
   const [newArticle, setNewArticle] = useState({
@@ -334,6 +344,13 @@ export default function Admin() {
     const newPrecios = { ...precios };
     delete newPrecios[size];
     updated[index].precios = newPrecios;
+
+    const curImages = getProductImages(updated[index]);
+    if (curImages[size]) {
+      const nextImages = { ...curImages };
+      delete nextImages[size];
+      updated[index].images = nextImages;
+    }
     setProducts(updated);
   };
 
@@ -388,6 +405,118 @@ export default function Admin() {
     }
   };
 
+
+  // Upload image for a specific weight of an existing product
+  const handleWeightImageUpload = async (productIndex, size, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5 MB.');
+      return;
+    }
+    const product = products[productIndex];
+    const key = `${product.id}-${size}`;
+    setUploadingWeightKey(key);
+
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: base64, folder: 'abunga-products' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Error al subir imagen.');
+        return;
+      }
+
+      const updated = [...products];
+      const curImages = getProductImages(updated[productIndex]);
+      const nextImages = { ...curImages, [size]: data.url };
+      updated[productIndex].images = nextImages;
+      setProducts(updated);
+
+      await saveProduct(updated[productIndex]);
+      toast.success(`Foto para tamaño ${size} guardada con éxito.`);
+    } catch (err) {
+      toast.error('Error al subir imagen. Intenta de nuevo.');
+    } finally {
+      setUploadingWeightKey(null);
+    }
+  };
+
+  const handleRemoveWeightImage = async (productIndex, size) => {
+    const updated = [...products];
+    const curImages = getProductImages(updated[productIndex]);
+    const nextImages = { ...curImages };
+    delete nextImages[size];
+    updated[productIndex].images = nextImages;
+    setProducts(updated);
+    await saveProduct(updated[productIndex]);
+    toast.success(`Foto para tamaño ${size} eliminada.`);
+  };
+
+  // Upload image for a specific weight in the new product form
+  const handleNewProductWeightImageUpload = async (size, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5 MB.');
+      return;
+    }
+    setUploadingWeightKey(`new-${size}`);
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: base64, folder: 'abunga-products' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Error al subir imagen.');
+        return;
+      }
+
+      setNewProduct(prev => ({
+        ...prev,
+        images: { ...(prev.images || {}), [size]: data.url }
+      }));
+      toast.success(`Foto para tamaño ${size} cargada.`);
+    } catch (err) {
+      toast.error('Error al subir imagen.');
+    } finally {
+      setUploadingWeightKey(null);
+    }
+  };
+
+  const handleRemoveNewProductWeightImage = (size) => {
+    setNewProduct(prev => {
+      const nextImages = { ...(prev.images || {}) };
+      delete nextImages[size];
+      return { ...prev, images: nextImages };
+    });
+  };
+
   // Save modified product
   const saveProduct = async (product) => {
     try {
@@ -406,13 +535,30 @@ export default function Admin() {
         preciosClean = Object.keys(cleaned).length > 0 ? cleaned : null;
       }
       
+      let imagesClean = product.images;
+      if (typeof imagesClean === 'string') {
+        try { imagesClean = JSON.parse(imagesClean); } catch (e) { imagesClean = {}; }
+      }
+      if (imagesClean && typeof imagesClean === 'object') {
+        const cleanedImgs = {};
+        Object.entries(imagesClean).forEach(([s, u]) => {
+          if (u && typeof u === 'string' && u.trim() !== '') {
+            cleanedImgs[s] = u.trim();
+          }
+        });
+        imagesClean = cleanedImgs;
+      } else {
+        imagesClean = {};
+      }
+
       const res = await fetch('/api/products', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...product,
           precio: product.precio ? Number(product.precio) : null,
-          precios: preciosClean
+          precios: preciosClean,
+          images: imagesClean
         })
       });
       const data = await res.json();
@@ -466,7 +612,8 @@ export default function Admin() {
         body: JSON.stringify({
           ...newProduct,
           precio: newProduct.precio ? Number(newProduct.precio) : null,
-          precios: Object.keys(activePrecios).length > 0 ? activePrecios : null
+          precios: Object.keys(activePrecios).length > 0 ? activePrecios : null,
+          images: newProduct.images || {}
         })
       });
       if (res.ok) {
@@ -841,32 +988,87 @@ export default function Admin() {
                       <p className="text-xs text-gray-400 italic">No se han definido pesos para este nuevo producto.</p>
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {sortWeights(Object.keys(newProduct.precios)).map((size) => (
-                          <div key={size} className="space-y-1 relative">
-                            <div className="flex justify-between items-center">
-                              <label className="text-[10px] font-bold text-gray-500 uppercase">Tamaño {size} (S/)</label>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveNewProductWeight(size)}
-                                className="text-red-500 hover:text-red-700 text-xs font-bold cursor-pointer"
-                                title={`Eliminar peso ${size}`}
-                              >
-                                ✕
-                              </button>
+                        {sortWeights(Object.keys(newProduct.precios)).map((size) => {
+                          const sizeImg = newProduct.images?.[size];
+                          const isUploading = uploadingWeightKey === `new-${size}`;
+                          return (
+                            <div key={size} className="space-y-2 relative bg-white p-3 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-gray-700 uppercase bg-gray-100 px-2 py-0.5 rounded-md">
+                                  {size}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveNewProductWeight(size)}
+                                  className="text-red-500 hover:text-red-700 text-xs font-bold cursor-pointer"
+                                  title={`Eliminar peso ${size}`}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="flex flex-col items-center">
+                                <input
+                                  type="file"
+                                  id={`file-new-${size}`}
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleNewProductWeightImageUpload(size, e.target.files?.[0])}
+                                />
+                                {isUploading ? (
+                                  <div className="w-full h-16 rounded-xl bg-slate-50 border border-dashed border-[#95b721] flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 text-[#95b721] animate-spin" />
+                                  </div>
+                                ) : sizeImg ? (
+                                  <div className="relative w-full h-16 rounded-xl border border-gray-200 overflow-hidden group bg-slate-50 flex items-center justify-center">
+                                    <img src={sizeImg} alt={`Foto ${size}`} className="w-full h-full object-contain p-1" />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                      <label
+                                        htmlFor={`file-new-${size}`}
+                                        className="p-1 bg-white/90 hover:bg-white text-gray-700 rounded-full cursor-pointer transition-transform hover:scale-110"
+                                        title="Cambiar foto de este tamaño"
+                                      >
+                                        <Camera className="w-3.5 h-3.5" />
+                                      </label>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveNewProductWeightImage(size)}
+                                        className="p-1 bg-red-500/90 hover:bg-red-600 text-white rounded-full cursor-pointer transition-transform hover:scale-110"
+                                        title="Quitar foto"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <label
+                                    htmlFor={`file-new-${size}`}
+                                    className="w-full h-16 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#95b721] bg-slate-50/50 hover:bg-white flex flex-col items-center justify-center cursor-pointer transition-all gap-0.5 group"
+                                    title={`Subir foto para ${size}`}
+                                  >
+                                    <Camera className="w-4 h-4 text-gray-400 group-hover:text-[#95b721] transition-colors" />
+                                    <span className="text-[9px] font-semibold text-gray-400 group-hover:text-[#95b721] transition-colors">Foto {size}</span>
+                                  </label>
+                                )}
+                              </div>
+
+                              <div>
+                                <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Precio (S/)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="Precio (S/)"
+                                  value={newProduct.precios[size]}
+                                  onChange={(e) => setNewProduct({
+                                    ...newProduct,
+                                    precios: { ...newProduct.precios, [size]: e.target.value }
+                                  })}
+                                  className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#95b721]"
+                                />
+                              </div>
                             </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              placeholder="Precio (S/)"
-                              value={newProduct.precios[size]}
-                              onChange={(e) => setNewProduct({
-                                ...newProduct,
-                                precios: { ...newProduct.precios, [size]: e.target.value }
-                              })}
-                              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#95b721]"
-                            />
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     {/* Control para añadir nuevo peso a nuevo producto */}
@@ -1054,30 +1256,86 @@ export default function Admin() {
                       {product.precios && typeof product.precios === 'object' && Object.keys(product.precios).length > 0 && (
                         <div className="md:col-span-4 space-y-3 bg-slate-50/50 p-3 rounded-2xl border border-gray-100">
                           <label className="text-[10px] font-bold text-gray-500 uppercase block">Precios por Peso:</label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {sortWeights(Object.keys(preciosObj)).map((size) => (
-                              <div key={size} className="space-y-1 relative">
-                                <div className="flex justify-between items-center">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{size}</label>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveProductWeight(idx, size)}
-                                    className="text-red-500 hover:text-red-700 text-[10px] font-bold cursor-pointer"
-                                    title={`Eliminar peso ${size}`}
-                                  >
-                                    ✕
-                                  </button>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                            {sortWeights(Object.keys(preciosObj)).map((size) => {
+                              const prodImgs = getProductImages(product);
+                              const sizeImg = prodImgs[size];
+                              const isUploading = uploadingWeightKey === `${product.id}-${size}`;
+                              return (
+                                <div key={size} className="space-y-2 relative bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-gray-700 uppercase bg-gray-100 px-1.5 py-0.5 rounded">
+                                      {size}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveProductWeight(idx, size)}
+                                      className="text-red-500 hover:text-red-700 text-xs font-bold cursor-pointer"
+                                      title={`Eliminar peso ${size}`}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+
+                                  <div className="flex flex-col items-center">
+                                    <input
+                                      type="file"
+                                      id={`file-${product.id}-${size}`}
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => handleWeightImageUpload(idx, size, e.target.files?.[0])}
+                                    />
+                                    {isUploading ? (
+                                      <div className="w-full h-16 rounded-lg bg-slate-50 border border-dashed border-[#95b721] flex items-center justify-center">
+                                        <Loader2 className="w-4 h-4 text-[#95b721] animate-spin" />
+                                      </div>
+                                    ) : sizeImg ? (
+                                      <div className="relative w-full h-16 rounded-lg border border-gray-200 overflow-hidden group bg-slate-50 flex items-center justify-center">
+                                        <img src={sizeImg} alt={`Foto ${size}`} className="w-full h-full object-contain p-1" />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                          <label
+                                            htmlFor={`file-${product.id}-${size}`}
+                                            className="p-1 bg-white/90 hover:bg-white text-gray-700 rounded-full cursor-pointer transition-transform hover:scale-110"
+                                            title="Cambiar foto de este tamaño"
+                                          >
+                                            <Camera className="w-3.5 h-3.5" />
+                                          </label>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemoveWeightImage(idx, size)}
+                                            className="p-1 bg-red-500/90 hover:bg-red-600 text-white rounded-full cursor-pointer transition-transform hover:scale-110"
+                                            title="Quitar foto de este tamaño"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <label
+                                        htmlFor={`file-${product.id}-${size}`}
+                                        className="w-full h-16 rounded-lg border-2 border-dashed border-gray-200 hover:border-[#95b721] bg-slate-50/50 hover:bg-white flex flex-col items-center justify-center cursor-pointer transition-all gap-0.5 group"
+                                        title={`Subir foto para ${size}`}
+                                      >
+                                        <Camera className="w-4 h-4 text-gray-400 group-hover:text-[#95b721] transition-colors" />
+                                        <span className="text-[9px] font-semibold text-gray-400 group-hover:text-[#95b721] transition-colors">Foto {size}</span>
+                                      </label>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Precio (S/)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={preciosObj[size] || ''}
+                                      placeholder="0.00"
+                                      onChange={(e) => handleProductPreciosChange(idx, size, e.target.value)}
+                                      className="w-full px-2.5 py-1 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#95b721] bg-white"
+                                    />
+                                  </div>
                                 </div>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={preciosObj[size] || ''}
-                                  placeholder="Precio (S/)"
-                                  onChange={(e) => handleProductPreciosChange(idx, size, e.target.value)}
-                                  className="w-full px-3 py-1 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#95b721] bg-white"
-                                />
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           
                           {/* Control para añadir nuevo peso */}

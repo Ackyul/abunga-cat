@@ -1363,18 +1363,19 @@ app.get('/api/products', async (req, res) => {
 
 // POST /api/products (Admin only)
 app.post('/api/products', verifySessionMiddleware, async (req, res) => {
-  const { name, tipo, fruta, image, precio, precios, brand, visible, bg_color, text_color } = req.body || {};
+  const { name, tipo, fruta, image, images, precio, precios, brand, visible, bg_color, text_color } = req.body || {};
   if (!name || !tipo || !fruta) {
     return res.status(400).json({ error: 'name, tipo y fruta son requeridos.' });
   }
 
   const queryPrecios = precios ? JSON.stringify(precios) : null;
+  const queryImages = images ? JSON.stringify(images) : null;
   const isVisible = visible !== false;
   
   try {
     const result = await sql`
-      INSERT INTO productos (name, tipo, fruta, image, precio, precios, brand, visible, bg_color, text_color)
-      VALUES (${name}, ${tipo}, ${fruta}, ${image || null}, ${precio || null}, ${queryPrecios}, ${brand || 'Abunga'}, ${isVisible}, ${bg_color || null}, ${text_color || null})
+      INSERT INTO productos (name, tipo, fruta, image, images, precio, precios, brand, visible, bg_color, text_color)
+      VALUES (${name}, ${tipo}, ${fruta}, ${image || null}, ${queryImages}, ${precio || null}, ${queryPrecios}, ${brand || 'Abunga'}, ${isVisible}, ${bg_color || null}, ${text_color || null})
       RETURNING *
     `;
     return res.status(201).json(result[0]);
@@ -1386,18 +1387,19 @@ app.post('/api/products', verifySessionMiddleware, async (req, res) => {
 
 // PUT /api/products (Admin only)
 app.put('/api/products', verifySessionMiddleware, async (req, res) => {
-  const { id, name, tipo, fruta, image, precio, precios, brand, visible, bg_color, text_color } = req.body || {};
+  const { id, name, tipo, fruta, image, images, precio, precios, brand, visible, bg_color, text_color } = req.body || {};
   if (!id) {
     return res.status(400).json({ error: 'id del producto es requerido.' });
   }
 
   const queryPrecios = precios ? JSON.stringify(precios) : null;
+  const queryImages = images ? JSON.stringify(images) : null;
   const isVisible = visible !== false;
 
   try {
     const result = await sql`
       UPDATE productos
-      SET name = ${name}, tipo = ${tipo}, fruta = ${fruta}, image = ${image}, precio = ${precio}, precios = ${queryPrecios}, brand = ${brand}, visible = ${isVisible}, bg_color = ${bg_color || null}, text_color = ${text_color || null}
+      SET name = ${name}, tipo = ${tipo}, fruta = ${fruta}, image = ${image}, images = ${queryImages}, precio = ${precio}, precios = ${queryPrecios}, brand = ${brand}, visible = ${isVisible}, bg_color = ${bg_color || null}, text_color = ${text_color || null}
       WHERE id = ${id}
       RETURNING *
     `;

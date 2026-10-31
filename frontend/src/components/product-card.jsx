@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { cn, sortWeights } from "../lib/utils";
+import { cn, sortWeights, getProductSizeImage } from "../lib/utils";
 import { ProductModal } from "./product-modal";
 import useCartStore from "../stores/useCartStore";
 import useAuthStore from "../stores/useAuthStore";
@@ -208,6 +208,7 @@ function ProductCard({ product, showActions = false }) {
     return 10;
   };
 
+  const cardImage = getProductSizeImage(product, selectedWeight);
   const displayPrice = getPrice();
   const cartItem = cart.find(
     (item) => item.id === product.id && item.selectedWeight === selectedWeight
@@ -224,7 +225,7 @@ function ProductCard({ product, showActions = false }) {
       });
       return;
     }
-    addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
+    addToCart({ id: product.id, name: product.name, image: cardImage, price: displayPrice, brand: product.brand }, 1, selectedWeight);
   };
   const handleIncrease = (e) => { 
     e.stopPropagation(); 
@@ -303,7 +304,7 @@ function ProductCard({ product, showActions = false }) {
           style={{ background: getCardBg() }}
         >
           <img
-            src={product.image}
+            src={cardImage}
             alt={product.name}
             className="h-full w-full object-contain p-3 md:p-5 transition-transform duration-300"
             onError={(e) => { e.target.style.display = "none"; }}

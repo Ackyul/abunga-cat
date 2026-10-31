@@ -25,3 +25,15 @@ export function sortWeights(weightKeys) {
     return wa.value - wb.value;
   });
 }
+
+export function getProductSizeImage(product, weight) {
+  if (!product) return '';
+  let imgs = product.images;
+  if (typeof imgs === 'string') {
+    try { imgs = JSON.parse(imgs); } catch { imgs = null; }
+  }
+  if (imgs && typeof imgs === 'object' && weight && imgs[weight]) {
+    return imgs[weight];
+  }
+  return product.image || '';
+}

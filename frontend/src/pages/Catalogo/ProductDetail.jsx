@@ -7,7 +7,7 @@ import useProductStore from "../../stores/useProductStore";
 import useCartStore from "../../stores/useCartStore";
 import useAuthStore from "../../stores/useAuthStore";
 import { slugify } from "../../lib/slugify";
-import { cn, sortWeights } from "../../lib/utils";
+import { cn, sortWeights, getProductSizeImage } from "../../lib/utils";
 import { toast } from "sonner";
 
 export default function ProductDetail() {
@@ -227,6 +227,7 @@ export default function ProductDetail() {
     return 10;
   };
 
+  const detailImage = getProductSizeImage(product, selectedWeight);
   const displayPrice = Number(getPrice());
 
   const nameLow2 = product.name?.toLowerCase() || "";
@@ -246,7 +247,7 @@ export default function ProductDetail() {
       });
       return;
     }
-    addToCart({ id: product.id, name: product.name, image: product.image, price: displayPrice, brand: product.brand }, 1, selectedWeight);
+    addToCart({ id: product.id, name: product.name, image: detailImage, price: displayPrice, brand: product.brand }, 1, selectedWeight);
     toast.success(`${product.name} (${selectedWeight}) añadido al pedido.`);
   };
 
@@ -318,7 +319,7 @@ export default function ProductDetail() {
             style={{ background: getDetailBg() }}
           >
             <img 
-              src={product.image} 
+              src={detailImage} 
               alt={product.name} 
               className={cn(
                 "max-h-[300px] md:max-h-[400px] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500",
